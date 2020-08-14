@@ -17,8 +17,8 @@ def location(device_id: int):
         if payload is None:
             return '', 204
 
-        longitude = payload["longitude"]
         latitude = payload["latitude"]
+        longitude = payload["longitude"]
         covid_status = payload["covid_status"]
 
         if not update_GPS(device_id, covid_status, latitude, longitude):
@@ -28,9 +28,11 @@ def location(device_id: int):
         # return "Longitude: {}, Latitude: {}, Covid: {}".format(longitude, latitude, covid_status), 200
         return '', 200
     elif request.method == 'GET':
+        # Get values from database
+        payload = get_GPS()
 
         # Get last location
-        return "GET"
+        return jsonify(payload)
 
     # No content since didn't supply body
     return '', 204
@@ -50,7 +52,8 @@ def reg_device():
     connection.ping(reconnect=True)
     cursor = connection.cursor()
     try:
-        cursor.execute("INSERT INTO device_registration OUTPUT Inserted.device_id DEFAULT VALUES;")
+        cursor.execute(
+            "INSERT INTO device_registration OUTPUT Inserted.device_id DEFAULT VALUES;")
         connection.commit()
         return cursor.fetchone()
     except Exception as e:
@@ -72,6 +75,7 @@ def update_GPS(device_id, covid_status, latitude, longitude):
         print("Update GPS failed, Error:", e)
         return False
 
+
 def get_GPS():
     global connection
     connection.ping(reconnect=True)
@@ -80,10 +84,11 @@ def get_GPS():
     try:
         cursor.execute(query)
         result = cursor.fetchall()
-        print("Result:",result)
+        print("Result:", result)
         return result
     except Exception as e:
         print("Get GPS failed, Error:", e)
         return False
+
 
 app.run(debug=True)
