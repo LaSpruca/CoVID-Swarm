@@ -50,8 +50,8 @@ def regDevice():
     connection.ping(reconnect=True)
     cursor = connection.cursor()
     try:
-        cursor.execute(
-            "INSERT INTO device_registration OUTPUT Inserted.device_id DEFAULT VALUES;")
+        cursor.execute("INSERT INTO device_registration OUTPUT Inserted.device_id DEFAULT VALUES;")
+        connection.commit()
         return cursor.fetchone()
     except Exception as e:
         print("Device Registration failed, Error:", e)
@@ -59,12 +59,14 @@ def regDevice():
 
 
 def UpdateGPS(device_id, covid_status, latitude, longitude):
+    print(device_id, covid_status, latitude, longitude)
     global connection
     connection.ping(reconnect=True)
     cursor = connection.cursor()
-    query = "INSERT INTO locations (device_id, covid_status, latitude, longitude) VALUES (device_id=%s, covid_status=%s, latitude=%s, longitude=%s)"
+    query = "INSERT INTO locations (device_id, covid_status, latitude, longitude) VALUES (%s, %s, %s, %s)"
     try:
         cursor.execute(query, (device_id, covid_status, latitude, longitude))
+        connection.commit()
         return True
     except Exception as e:
         print("Update GPS failed, Error:", e)
