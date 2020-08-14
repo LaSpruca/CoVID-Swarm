@@ -21,7 +21,7 @@ def location(device_id: int):
         latitude = payload["latitude"]
         covid_status = payload["covid_status"]
 
-        if not UpdateGPS(device_id, covid_status, latitude, longitude):
+        if not update_GPS(device_id, covid_status, latitude, longitude):
             return '', 500
 
         # Update location
@@ -45,7 +45,7 @@ connection = pymysql.connect(
 )
 
 
-def regDevice():
+def reg_device():
     global connection
     connection.ping(reconnect=True)
     cursor = connection.cursor()
@@ -58,7 +58,7 @@ def regDevice():
         return False
 
 
-def UpdateGPS(device_id, covid_status, latitude, longitude):
+def update_GPS(device_id, covid_status, latitude, longitude):
     print(device_id, covid_status, latitude, longitude)
     global connection
     connection.ping(reconnect=True)
@@ -72,5 +72,18 @@ def UpdateGPS(device_id, covid_status, latitude, longitude):
         print("Update GPS failed, Error:", e)
         return False
 
+def get_GPS():
+    global connection
+    connection.ping(reconnect=True)
+    cursor = connection.cursor(dict)
+    query = "SELECT covid_status, latitude, longitude FROM locations"
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        print("Result:",result)
+        return result
+    except Exception as e:
+        print("Get GPS failed, Error:", e)
+        return False
 
 app.run(debug=True)
