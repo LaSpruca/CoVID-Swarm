@@ -4,7 +4,7 @@ import pymysql
 try:
     import config
 except Exception:
-    print("Please make config file and copy contents from dev info file")
+    print ("Please make config.py file and copy contents from dev info file")
 
 app = Flask("CoVID-SWARM")
 
@@ -41,7 +41,26 @@ connection = pymysql.connect(
 def regDevice():
     global connection
     connection.ping(reconnect=True)
-    cursor = pymysql.cursors.Cursor(connection)
+    cursor = connection.cursor()
+    try:
+        cursor.execute("INSERT INTO device_registration OUTPUT Inserted.device_id DEFAULT VALUES;")
+        return cursor.fetchone()
+    except Exception as e:
+        print ("Device Registration failed, Error:", e)
+        return False
+
+def UpdateGPS(device_id, covid_status, latitude, longitude ):
+    global connection
+    connection.ping(reconnect=True)
+    cursor = connection.cursor()
+    query = "INSERT INTO device_registration (device_id, covid_status, latitude, longitude) VALUES (device_id=%s, covid_status=%s, latitude=%s, longitude=%s)"
+    try:
+        cursor.execute(query, device_id, covid_status, latitude, longitude)
+    except Exception as e:
+        print ("Update GPS failed, Error:", e)
+
+
+    
 
 
 app.run(debug=True)
