@@ -55,7 +55,7 @@ def UpdateGPS(device_id, covid_status, latitude, longitude ):
     cursor = connection.cursor()
     query = "INSERT INTO device_registration (device_id, covid_status, latitude, longitude) VALUES (device_id=%s, covid_status=%s, latitude=%s, longitude=%s)"
     try:
-        cursor.execute(query, device_id, covid_status, latitude, longitude)
+        cursor.execute(query,( device_id, covid_status, latitude, longitude))
     except Exception as e:
         print ("Update GPS failed, Error:", e)
 
