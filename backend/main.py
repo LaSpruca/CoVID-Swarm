@@ -79,7 +79,7 @@ def update_GPS(device_id, covid_status, latitude, longitude):
 def get_GPS():
     global connection
     connection.ping(reconnect=True)
-    cursor = connection.cursor(dict)
+    cursor = connection.cursor(cursor=pymysql.cursors.DictCursor)
     query = "SELECT covid_status, latitude, longitude FROM locations"
     try:
         cursor.execute(query)
