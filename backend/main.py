@@ -4,7 +4,7 @@ import pymysql
 try:
     import config
 except Exception:
-    print("Please make config file")
+    print ("Please make config file and copy contents from dev info file")
 
 app = Flask("CoVID-SWARM")
 
@@ -13,6 +13,15 @@ app = Flask("CoVID-SWARM")
 def update_location(device_id: int):
     return "Not Implemented"
 
-
-def setupDB():
-    # SQL code goes here
+connection = pymysql.connect(
+        host=config.host,
+        user=config.username,
+        password=config.password,
+        port=config.port,
+        database=config.database
+        )
+def regDevice():
+    global connection
+    connection.ping(reconnect=True)
+    cursor = pymysql.cursors.Cursor(connection)
+    
