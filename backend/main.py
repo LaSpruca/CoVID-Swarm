@@ -1,10 +1,10 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import pymysql
 
 try:
     import config
 except Exception:
-    print ("Please make config.py file and copy contents from dev info file")
+    print("Please make config.py file and copy contents from dev info file")
 
 app = Flask("CoVID-SWARM")
 
@@ -15,18 +15,25 @@ def location(device_id: int):
         # For JSON Payload
         payload = request.get_json(force=True)
         if payload is None:
-            return None
+            return '', 204
 
         longitude = payload["longitude"]
         latitude = payload["latitude"]
+        covid_status = payload["covid_status"]
+
+        if not UpdateGPS(device_id, covid_status, latitude, longitude):
+            return '', 500
 
         # Update location
-        return "Longitude: {}, Latitude: {}".format(longitude, latitude)
+        # return "Longitude: {}, Latitude: {}, Covid: {}".format(longitude, latitude, covid_status), 200
+        return '', 200
     elif request.method == 'GET':
+
         # Get last location
         return "GET"
 
-    return "No Request"
+    # No content since didn't supply body
+    return '', 204
 
 
 connection = pymysql.connect(
@@ -43,24 +50,25 @@ def regDevice():
     connection.ping(reconnect=True)
     cursor = connection.cursor()
     try:
-        cursor.execute("INSERT INTO device_registration OUTPUT Inserted.device_id DEFAULT VALUES;")
+        cursor.execute(
+            "INSERT INTO device_registration OUTPUT Inserted.device_id DEFAULT VALUES;")
         return cursor.fetchone()
     except Exception as e:
-        print ("Device Registration failed, Error:", e)
+        print("Device Registration failed, Error:", e)
         return False
 
-def UpdateGPS(device_id, covid_status, latitude, longitude ):
+
+def UpdateGPS(device_id, covid_status, latitude, longitude):
     global connection
     connection.ping(reconnect=True)
     cursor = connection.cursor()
-    query = "INSERT INTO device_registration (device_id, covid_status, latitude, longitude) VALUES (device_id=%s, covid_status=%s, latitude=%s, longitude=%s)"
+    query = "INSERT INTO locations (device_id, covid_status, latitude, longitude) VALUES (device_id=%s, covid_status=%s, latitude=%s, longitude=%s)"
     try:
-        cursor.execute(query,( device_id, covid_status, latitude, longitude))
+        cursor.execute(query, (device_id, covid_status, latitude, longitude))
+        return True
     except Exception as e:
-        print ("Update GPS failed, Error:", e)
-
-
-    
+        print("Update GPS failed, Error:", e)
+        return False
 
 
 app.run(debug=True)
