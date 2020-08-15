@@ -42,7 +42,8 @@ def location(device_id: int):
 def device():
     device = reg_device()
     if not False:
-        return device["device_id"]
+        print("Device:",device)
+        return str(device),200
 
     return '', 500
 
@@ -59,12 +60,12 @@ connection = pymysql.connect(
 def reg_device():
     global connection
     connection.ping(reconnect=True)
-    cursor = connection.cursor(cursor=pymysql.cursors.DictCursor)
+    cursor = connection.cursor()
     try:
-        cursor.execute(
-            "INSERT INTO device_registration OUTPUT Inserted.device_id DEFAULT VALUES;")
+        cursor.execute("INSERT INTO device_registration VALUES ();")
         connection.commit()
-        return cursor.fetchone()
+        cursor.execute("SELECT LAST_INSERT_ID();")
+        return cursor.fetchone()[0]
     except Exception as e:
         print("Device Registration failed, Error:", e)
         return False
