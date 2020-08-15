@@ -91,7 +91,8 @@ def get_GPS():
     global connection
     connection.ping(reconnect=True)
     cursor = connection.cursor(cursor=pymysql.cursors.DictCursor)
-    query = "SELECT covid_status, latitude, longitude FROM locations"
+    query = "SELECT covid_status, latitude, longitude FROM locations GROUP BY device_id"
+
     try:
         cursor.execute(query)
         result = cursor.fetchall()
