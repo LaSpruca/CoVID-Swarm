@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:CovidSwarm/get_location.dart';
 import 'package:background_fetch/background_fetch.dart';
@@ -10,9 +9,10 @@ import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void updateGPS() {
+  print("Updating GPS location");
   Pos location = Pos.err();
   getPosition().then((value) async {
-    if (value.error) {
+    if (!value.error) {
       location = value;
       print("Location: ${location.toString()}");
       var deviceID = await _getDeviceID();
@@ -31,6 +31,8 @@ void updateGPS() {
       } finally {
         client.close();
       }
+    } else {
+      print("GPS failed: "+value.error.toString());
     }
   });
 }
@@ -74,7 +76,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Completer<GoogleMapController> _controller = Completer();
   Set<Heatmap> _heatmaps = {};
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
-  final GlobalKey<ScaffoldState> _mapScaffoldKey = new GlobalKey<ScaffoldState>();
+  final GlobalKey<ScaffoldState> _mapScaffoldKey =
+      new GlobalKey<ScaffoldState>();
   bool backgroundTaskEnabled = true;
   double currentZoom = 1;
   double heatmapZoom = 1;
@@ -130,9 +133,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   floatingActionButton: FloatingActionButton.extended(
                     onPressed: _refreshHeatmap,
                     label: Text("Refresh"),
-                    icon: Icon(Icons.refresh) ,
+                    icon: Icon(Icons.refresh),
                   ),
-
                 ),
                 Settings(this)
               ],
@@ -208,11 +210,15 @@ class _MyHomePageState extends State<MyHomePage> {
           ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
               .round()
               .toString());
-      var timeDiff =
+      var pointWeight =
           ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
               .round();
-      points.add(_createWeightedLatLng(
-          jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], timeDiff));
+      if (pointWeight > 0) {
+        points.add(_createWeightedLatLng(
+          jsonGpsPoint["latitude"], 
+          jsonGpsPoint["longitude"], 
+          pointWeight));
+      }
     }
 
     // if (numberOfPoints > 50) {
@@ -293,11 +299,10 @@ class Settings extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
         ),
         MaterialButton(
-          child: PaddedText("Toggle background task"),
+          child: PaddedText("Push current location"),
           onPressed: () {
-            homePage.setState(() {
-              homePage.backgroundTaskEnabled = !homePage.backgroundTaskEnabled;
-            });
+            print("Manule GPS push");
+            updateGPS();
           },
         ),
         MaterialButton(
@@ -306,17 +311,22 @@ class Settings extends StatelessWidget {
               homePage.setState(() {
                 homePage._refreshHeatmap();
               });
-            })
+            }),
+        MaterialButton (
+          child: PaddedText("Register as new device"),
+          onPressed: () async {
+            final SharedPreferences prefs = await SharedPreferences.getInstance();
+            prefs.clear();
+          },
+          )
       ],
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
-      
     );
   }
 
   Settings(this.homePage);
 }
-
 
 class PaddedText extends StatelessWidget {
   String text;
@@ -328,5 +338,4 @@ class PaddedText extends StatelessWidget {
       padding: EdgeInsets.all(10),
     );
   }
-
 }
