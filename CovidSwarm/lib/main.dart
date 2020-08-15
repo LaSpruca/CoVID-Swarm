@@ -14,18 +14,23 @@ Future<void> backgroundFetchHeadless(String taskID) {
     location = value;
     print("Location: ${location.toString()}");
     var client = http.Client();
-    try {
-      var uriResponse = await client.post('http://swarm.qrl.nz/location/32948',
-        body: {'device_id' : "420", 'covid_status' : "false", 'latitude' : location.latitude, 'longitude' : location.longitude}
+    // try {
+    //   var uriResponse = await client.post('http://swarm.qrl.nz/location/32948',
+    //     body: {'device_id' : "420", 'covid_status' : "false", 'latitude' : location.latitude, 'longitude' : location.longitude}
+    //     );
+    //   print("Server status code: "+ uriResponse.statusCode.toString());
+      
+    // } catch(e) {
+    //   print("Error on server post: "+e.toString());
+    // }
+    // finally {
+    //   client.close();
+    // }
+          var uriResponse = await client.post('http://swarm.qrl.nz/location/32948',
+        body: jsonEncode({"covid_status" : false, "latitude" : location.latitude.toString(), "longitude" : location.longitude.toString()})
         );
       print("Server status code: "+ uriResponse.statusCode.toString());
-      
-    } catch(e) {
-      print("Error on server post: "+e.toString());
-    }
-    finally {
       client.close();
-    }
   });
 }
 
@@ -152,7 +157,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _heatmaps.add(Heatmap(
           heatmapId: HeatmapId(_heatmapLocation.toString()),
           points: points,
-          radius: 20,
+          radius: 50,
           visible: true,
           gradient: HeatmapGradient(
               colors: <Color>[Colors.green, Colors.red],
