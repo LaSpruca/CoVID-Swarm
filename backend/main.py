@@ -27,6 +27,15 @@ class CustomJSONEncoder(JSONEncoder):
 app = Flask("CoVID-SWARM")
 app.json_encoder = CustomJSONEncoder
 
+# Connection info for database
+connection = pymysql.connect(
+    host=config.host,
+    user=config.username,
+    password=config.password,
+    port=config.port,
+    database=config.database
+)
+
 
 @app.route("/location/<int:device_id>", methods=['POST'])
 def update_location(device_id: int):
@@ -66,13 +75,11 @@ def device():
     return '', 500
 
 
-connection = pymysql.connect(
-    host=config.host,
-    user=config.username,
-    password=config.password,
-    port=config.port,
-    database=config.database
-)
+@app.route("/covid", methods=["GET"])
+def covid_cases():
+    payload = get_active_cases()
+
+    return jsonify(payload), 200
 
 
 def reg_device():
@@ -112,10 +119,26 @@ def get_GPS():
     try:
         cursor.execute(query)
         result = cursor.fetchall()
-        print("Result:", result)
+        print("Result: ", result)
         return result
     except Exception as e:
         print("Get GPS failed, Error:", e)
+        return False
+
+
+def get_active_cases():
+    global connection
+    connection.ping(reconnect=True)
+    cursor = connection.cursor(cursor=pymysql.cursors.DictCursor)
+    query = "SELECT * FROM covid_cases"
+
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        print("Result: ", result)
+        return result
+    except Exception as e:
+        print("Get CoVID Failed, Error:", e)
         return False
 
 
