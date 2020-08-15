@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:CovidSwarm/get_location.dart';
@@ -140,11 +141,12 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
   Future<void> _refreshHeatmap() async {
+    final points = await _getPoints(_heatmapLocation);
     setState(() {
       _heatmaps.add(
         Heatmap(
           heatmapId: HeatmapId(_heatmapLocation.toString()),
-          points: _getPoints(_heatmapLocation),
+          points: points,
           radius: 20,
           visible: true,
           gradient:  HeatmapGradient(
@@ -156,9 +158,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // controller.animateCamera(CameraUpdate.newCameraPosition(_kLake));
   }
-  List<WeightedLatLng> _getPoints(LatLng location) {
+  Future<List<WeightedLatLng>> _getPoints(LatLng location) async {
     final List<WeightedLatLng> points = <WeightedLatLng>[];
-    final serverJSON = _getServerGPS();
+    final serverJSON = await _getServerGPS();
+    print(json.decode(serverJSON));
     points.add(_createWeightedLatLng(-35.7288, 174.3304, 1));
     return points;
   }
