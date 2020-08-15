@@ -10,12 +10,23 @@ import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 
 Future<void> backgroundFetchHeadless(String taskID) {
   Pos location = Pos.err();
-  getPosition().then((value) => {location = value});
-  print("Location: ${location.toString()}");
-  http.post('http://swarm.qrl.nz/location/32948',
-    body: {'device_id' : 420, 'covid_status' : false, 'latitude' : location.latitude, 'longitude' : location.longitude}
-    );
-  
+  getPosition().then((value) async {
+    location = value;
+    print("Location: ${location.toString()}");
+    var client = http.Client();
+    try {
+      var uriResponse = await client.post('http://swarm.qrl.nz/location/32948',
+        body: {'device_id' : "420", 'covid_status' : "false", 'latitude' : location.latitude, 'longitude' : location.longitude}
+        );
+      print("Server status code: "+ uriResponse.statusCode.toString());
+      
+    } catch(e) {
+      print("Error on server post: "+e.toString());
+    }
+    finally {
+      client.close();
+    }
+  });
 }
 
 void main() {
@@ -98,16 +109,15 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: Row (
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          FloatingActionButton(
+          FloatingActionButton (
             onPressed: _refreshHeatmap,
-            label: Text('Refresh Heatmap'),
-            icon: Icon(Icons.refresh),
+            child: (
+              Text('Refresh Heatmap')
+            ),
           ),
           FloatingActionButton(
             onPressed: _manuleUpdateGPS,
-            label: Text(''),
-            icon: Icon(Icons.update),
-          ),
+            child: Text('Push GPS')),
         ],
       )
 
