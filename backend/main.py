@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 from flask import Flask, request, jsonify
+from flask.json import JSONEncoder
+from datetime import date
+import json
 import pymysql
 
 try:
@@ -7,7 +10,21 @@ try:
 except Exception:
     print("Please make config.py file and copy contents from dev info file")
 
+
+class CustomJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        try:
+            if isinstance(obj, date):
+                return obj.isoformat()
+            iterable = iter(obj)
+        except TypeError:
+            pass
+        else:
+            return list(iterable)
+        return JSONEncoder.default(self, obj)
+
 app = Flask("CoVID-SWARM")
+app.json_encoder = CustomJSONEncoder
 
 
 @app.route("/location/<int:device_id>", methods=['POST', 'GET'])
