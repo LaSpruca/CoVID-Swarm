@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:CovidSwarm/get_location.dart';
 import 'package:background_fetch/background_fetch.dart';
@@ -73,6 +74,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Set<Heatmap> _heatmaps = {};
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   bool backgroundTaskEnabled = true;
+  double currentZoom = 1;
+  double heatmapZoom = 1;
 
   @override
   void initState() {
@@ -81,7 +84,6 @@ class _MyHomePageState extends State<MyHomePage> {
     var fiveMinutes = Duration(minutes: 5);
     Timer.periodic(fiveMinutes, (timer) {
       setState(() {
-        _getServerGPS();
         _refreshHeatmap();
       });
     });
@@ -89,8 +91,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    ;
-    _refreshHeatmap();
     return DefaultTabController(
         length: 2,
         child: Scaffold(
@@ -107,21 +107,25 @@ class _MyHomePageState extends State<MyHomePage> {
             body: TabBarView(
               physics: NeverScrollableScrollPhysics(),
               children: [
-                GoogleMap (
+                GoogleMap(
                   mapType: MapType.hybrid,
                   heatmaps: _heatmaps,
+                  minMaxZoomPreference: MinMaxZoomPreference(1, 19),
                   initialCameraPosition: CameraPosition(
                     target: LatLng(37.42796133580664, -122.085749655962),
-                    zoom: 1.4746,
+                    zoom: 1,
                   ),
                   onMapCreated: (GoogleMapController controller) {
-                    _controller.complete(controller);
+                    if (!_controller.isCompleted) {
+                      _controller.complete(controller);
+                    }
                   },
+                  onCameraMove: _cameraMove,
+                  onCameraIdle: _cameraIdle,
                 ),
                 Settings(this)
               ],
-            )
-        ));
+            )));
   }
 
   Future<void> initPlatformState() async {
@@ -144,14 +148,29 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!mounted) return;
   }
 
+  void _cameraIdle() async {
+    if (heatmapZoom != currentZoom) {
+      heatmapZoom = currentZoom;
+      print("Zoom in camera change function: " + currentZoom.toString());
+      _refreshHeatmap();
+    }
+  }
+
+  void _cameraMove(CameraPosition position) async {
+    currentZoom = position.zoom;
+  }
+
   Future<void> _refreshHeatmap() async {
+    print("Refreshing Heatmap, Scaled points radis: " +
+        (10 * currentZoom).round().toString());
+    print("Zoom in refresh heatmap function: " + currentZoom.toString());
     var points = await _getPoints();
     print("Server Points: " + points.toString());
     setState(() {
       _heatmaps.add(Heatmap(
           heatmapId: HeatmapId("people_tracking"),
           points: points,
-          radius: 50,
+          radius: (10 * currentZoom).round(),
           visible: true,
           gradient: HeatmapGradient(
               colors: <Color>[Colors.blue, Colors.red],
@@ -167,12 +186,25 @@ class _MyHomePageState extends State<MyHomePage> {
     print("Geting server points");
     final serverJSON = await _getServerGPS();
     final decodedGPS = json.decode(serverJSON);
-
+    final currentTime = DateTime.now();
+    int numberOfPoints = 0;
     for (var jsonGpsPoint in decodedGPS) {
+      numberOfPoints++;
+
+      //Weight is based off how recent the data point is
+      var pointTime = DateTime.parse(jsonGpsPoint["latest_time"]);
+      var timeDiff =
+          ((1 / ((currentTime.difference(pointTime).inSeconds) / 60)) * 100)
+              .round();
       points.add(_createWeightedLatLng(
-          jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], 1));
+          jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], timeDiff));
     }
 
+    // if (numberOfPoints > 50) {
+    //   return points;
+    // } else {
+    //   return <WeightedLatLng>[];
+    // }
     return points;
   }
 
@@ -181,13 +213,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<String> _getServerGPS() async {
-    final response = await http.get('http://swarm.qrl.nz/location/32948');
+    final response = await http.get('http://swarm.qrl.nz/location');
 
     if (response.statusCode == 200) {
       _scaffoldKey.currentState.showSnackBar(SnackBar(
         content: new Text('Brrrrrrrrrrrr'),
         duration: new Duration(seconds: 10),
       ));
+      print("Server responded with: "+ response.body);
       return response.body;
     } else {
       // If the server did not return a 200 OK response,
@@ -215,13 +248,12 @@ Future<int> _getDeviceID() async {
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.
-      print(
-          "Failed to reg with server, status:" + response.statusCode.toString());
+      print("Failed to reg with server, status:" +
+          response.statusCode.toString());
       return -1;
     }
   }
 }
-
 
 class Settings extends StatelessWidget {
   _MyHomePageState homePage;
@@ -230,7 +262,8 @@ class Settings extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text("Background upload is currently ${homePage.backgroundTaskEnabled ? "active" : "disabled"}"),
+        Text(
+            "Background upload is currently ${homePage.backgroundTaskEnabled ? "active" : "disabled"}"),
         MaterialButton(
           child: Text("Manual Update GPS"),
           onPressed: updateGPS,
@@ -244,14 +277,13 @@ class Settings extends StatelessWidget {
           },
         ),
         MaterialButton(
-          child: Text("Manual map update"),
-          onPressed: () {
-            homePage.setState(() {
-              homePage._getServerGPS();
-              homePage._refreshHeatmap();
-            });
-          }
-        )
+            child: Text("Manual map update"),
+            onPressed: () {
+              homePage.setState(() {
+                homePage._getServerGPS();
+                homePage._refreshHeatmap();
+              });
+            })
       ],
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
