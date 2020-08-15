@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const version = [1,0,0];
+
 void updateGPS() {
   print("Updating GPS location");
   Pos location = Pos.err();
