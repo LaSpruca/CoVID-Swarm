@@ -109,31 +109,7 @@ class _MyHomePageState extends State<MyHomePage> {
             body: TabBarView(
               physics: NeverScrollableScrollPhysics(),
               children: [
-                Scaffold(
-                  key: _mapScaffoldKey,
-                  body: GoogleMap(
-                    mapType: MapType.hybrid,
-                    heatmaps: _heatmaps,
-                    minMaxZoomPreference: MinMaxZoomPreference(1, 18),
-                    initialCameraPosition: CameraPosition(
-                      target: LatLng(-40.501210, 174.050287),
-                      zoom: 5,
-                    ),
-                    onMapCreated: (GoogleMapController controller) {
-                      if (!_controller.isCompleted) {
-                        _controller.complete(controller);
-                      }
-                    },
-                    onCameraMove: _cameraMove,
-                    onCameraIdle: _cameraIdle,
-                  ),
-                  floatingActionButton: FloatingActionButton.extended(
-                    onPressed: _refreshHeatmap,
-                    label: Text("Refresh"),
-                    icon: Icon(Icons.refresh) ,
-                  ),
-
-                ),
+                MapPage(this),
                 Settings(this)
               ],
             )));
@@ -214,12 +190,6 @@ class _MyHomePageState extends State<MyHomePage> {
       points.add(_createWeightedLatLng(
           jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], timeDiff));
     }
-
-    // if (numberOfPoints > 50) {
-    //   return points;
-    // } else {
-    //   return <WeightedLatLng>[];
-    // }
     return points;
   }
 
@@ -329,4 +299,39 @@ class PaddedText extends StatelessWidget {
     );
   }
 
+}
+
+class MapPage extends StatelessWidget {
+
+  _MyHomePageState parent;
+
+  MapPage(this.parent);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: parent._mapScaffoldKey,
+      body: GoogleMap(
+        mapType: MapType.hybrid,
+        heatmaps: parent._heatmaps,
+        minMaxZoomPreference: MinMaxZoomPreference(1, 18),
+        initialCameraPosition: CameraPosition(
+          target: LatLng(-40.501210, 174.050287),
+          zoom: 5,
+        ),
+        onMapCreated: (GoogleMapController controller) {
+          if (!parent._controller.isCompleted) {
+            parent._controller.complete(controller);
+          }
+        },
+        onCameraMove: parent._cameraMove,
+        onCameraIdle: parent._cameraIdle,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: parent._refreshHeatmap,
+        label: Text("Refresh"),
+        icon: Icon(Icons.refresh) ,
+      ),
+    );
+  }
 }
