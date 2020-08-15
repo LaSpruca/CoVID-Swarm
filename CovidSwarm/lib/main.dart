@@ -3,7 +3,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 void main() {
+  const fiveMinutes = const Duration(minutes: 5);
+  Timer.periodic(fiveMinutes, (t) {
+    print("Getting location");
+    getPosition().then((value) => print(value.toString()));
+  });
   runApp(MyApp());
 }
 
@@ -127,18 +133,16 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: 
-        GoogleMap(
+      body: GoogleMap(
         mapType: MapType.normal,
         initialCameraPosition: CameraPosition(
           target: LatLng(37.42796133580664, -122.085749655962),
           zoom: 14.4746,
         ),
       ),
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        
-      
+      // Center is a layout widget. It takes a single child and positions it
+      // in the middle of the parent.
+
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
         tooltip: 'Increment',
