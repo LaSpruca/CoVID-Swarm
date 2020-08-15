@@ -1,6 +1,8 @@
+import 'dart:ffi';
+
 import 'package:CovidSwarm/get_location.dart';
 import 'dart:async';
-
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 void main() {
@@ -100,6 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Completer<GoogleMapController> _controller = Completer();
   final Set<Heatmap> _heatmaps = {};
   LatLng _heatmapLocation = LatLng(37.42796133580664, -122.085749655962);
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +113,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
@@ -154,7 +158,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   List<WeightedLatLng> _getPoints(LatLng location) {
     final List<WeightedLatLng> points = <WeightedLatLng>[];
-    //Can create multiple points here
+    final serverJSON = _getServerGPS();
     points.add(_createWeightedLatLng(-35.7288, 174.3304, 1));
     return points;
   }
@@ -163,4 +167,31 @@ class _MyHomePageState extends State<MyHomePage> {
     return WeightedLatLng(point: LatLng(lat, lng), intensity: weight);
   }
 
+  Future<String> _getServerGPS() async {
+    final response = await http.get('http://swarm.qrl.nz/location/32948');
+    if (response.statusCode == 200) {
+      // If the server did return a 200 OK response,
+      // then parse the JSON.
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: new Text('Brrrrrrrrrrrr'),
+          duration: new Duration(seconds: 10),
+        )
+      );
+      return response.body;
+    } else {
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: new Text('Failed to contact server! Code: ${response.statusCode}'),
+          duration: new Duration(seconds: 10),
+        )
+      );
+
+    }
+  }
+
 }
+
