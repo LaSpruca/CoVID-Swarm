@@ -107,7 +107,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Completer<GoogleMapController> _controller = Completer();
-  final Set<Heatmap> _heatmaps = {};
+  Set<Heatmap> _heatmaps = {};
   LatLng _heatmapLocation = LatLng(37.42796133580664, -122.085749655962);
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
@@ -131,7 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
         heatmaps: _heatmaps,
         initialCameraPosition: CameraPosition(
           target: LatLng(37.42796133580664, -122.085749655962),
-          zoom: 14.4746,
+          zoom: 1.4746,
         ),
         onMapCreated: (GoogleMapController controller) {
           _controller.complete(controller);
@@ -146,7 +146,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _refreshHeatmap() async {
-    final points = await _getPoints(_heatmapLocation);
+    var points = await _getPoints();
+    print("Server Points: "+ points.toString());
     setState(() {
       _heatmaps.add(Heatmap(
           heatmapId: HeatmapId(_heatmapLocation.toString()),
@@ -161,11 +162,18 @@ class _MyHomePageState extends State<MyHomePage> {
     // controller.animateCamera(CameraUpdate.newCameraPosition(_kLake));
   }
 
-  Future<List<WeightedLatLng>> _getPoints(LatLng location) async {
+  Future<List<WeightedLatLng>> _getPoints() async {
     final List<WeightedLatLng> points = <WeightedLatLng>[];
+
+    print("Geting server points");
     final serverJSON = await _getServerGPS();
-    print(json.decode(serverJSON));
-    points.add(_createWeightedLatLng(-35.7288, 174.3304, 1));
+    final decodedGPS = json.decode(serverJSON);
+
+    for (var jsonGpsPoint in decodedGPS) {
+      points.add(_createWeightedLatLng(jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], 1));
+    }
+
+    
     return points;
   }
 
@@ -175,9 +183,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<String> _getServerGPS() async {
     final response = await http.get('http://swarm.qrl.nz/location/32948');
+
     if (response.statusCode == 200) {
-      // If the server did return a 200 OK response,
-      // then parse the JSON.
       _scaffoldKey.currentState.showSnackBar(SnackBar(
         content: new Text('Brrrrrrrrrrrr'),
         duration: new Duration(seconds: 10),
@@ -192,6 +199,7 @@ class _MyHomePageState extends State<MyHomePage> {
             new Text('Failed to contact server! Code: ${response.statusCode}'),
         duration: new Duration(seconds: 10),
       ));
+      return "[]";
     }
   }
 }
