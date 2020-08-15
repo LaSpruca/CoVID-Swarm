@@ -12,6 +12,10 @@ Future<void> backgroundFetchHeadless(String taskID) {
   Pos location = Pos.err();
   getPosition().then((value) => {location = value});
   print("Location: ${location.toString()}");
+  http.post('http://swarm.qrl.nz/location/32948',
+    body: {'device_id' : 420, 'covid_status' : false, 'latitude' : location.latitude, 'longitude' : location.longitude}
+    );
+  
 }
 
 void main() {
@@ -91,11 +95,22 @@ class _MyHomePageState extends State<MyHomePage> {
           _controller.complete(controller);
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _refreshHeatmap,
-        label: Text('Refresh Heatmap'),
-        icon: Icon(Icons.refresh),
-      ),
+      floatingActionButton: Row (
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          FloatingActionButton(
+            onPressed: _refreshHeatmap,
+            label: Text('Refresh Heatmap'),
+            icon: Icon(Icons.refresh),
+          ),
+          FloatingActionButton(
+            onPressed: _manuleUpdateGPS,
+            label: Text(''),
+            icon: Icon(Icons.update),
+          ),
+        ],
+      )
+
     );
   }
 
@@ -177,4 +192,9 @@ class _MyHomePageState extends State<MyHomePage> {
       return "[]";
     }
   }
+
+  void _manuleUpdateGPS() {
+    backgroundFetchHeadless("ManuleShit");
+  }
+  
 }
