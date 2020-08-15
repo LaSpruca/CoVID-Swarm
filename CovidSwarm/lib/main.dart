@@ -312,5 +312,38 @@ class PaddedText extends StatelessWidget {
     );
   }
 }
+class MapPage extends StatelessWidget {
+
+  _MyHomePageState parent;
+
+  MapPage(this.parent);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: parent._mapScaffoldKey,
+      body: GoogleMap(
+        mapType: MapType.hybrid,
+        heatmaps: parent._heatmaps,
+        minMaxZoomPreference: MinMaxZoomPreference(1, 18),
+        initialCameraPosition: CameraPosition(
+          target: LatLng(-40.501210, 174.050287),
+          zoom: 5,
+        ),
+        onMapCreated: (GoogleMapController controller) {
+          if (!parent._controller.isCompleted) {
+            parent._controller.complete(controller);
+          }
+        },
+        onCameraMove: parent._cameraMove,
+        onCameraIdle: parent._cameraIdle,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: parent._refreshHeatmap,
+        label: Text("Refresh"),
+        icon: Icon(Icons.refresh) ,
+      ),
+    );
+  }
 
 }
