@@ -1,3 +1,4 @@
+import 'package:CovidSwarm/get_location.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -99,6 +100,9 @@ class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
 
   void _incrementCounter() {
+    getPosition()
+        .then((value) => print(value.toString()))
+        .catchError((err) => print("There was an error: " + err.toString()));
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
