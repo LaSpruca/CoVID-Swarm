@@ -73,7 +73,6 @@ def reg_device():
 
 
 def update_GPS(device_id, covid_status, latitude, longitude):
-    print(device_id, covid_status, latitude, longitude)
     global connection
     connection.ping(reconnect=True)
     cursor = connection.cursor()

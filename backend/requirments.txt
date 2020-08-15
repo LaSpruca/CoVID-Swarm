@@ -1,3 +1,5 @@
 pymysql
 Flask-JSON
 flask
+xlrd
+pandas
