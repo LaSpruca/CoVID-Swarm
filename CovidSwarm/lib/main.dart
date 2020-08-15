@@ -4,7 +4,7 @@ import 'package:CovidSwarm/get_location.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 
 void main() {
   const fiveMinutes = const Duration(minutes: 5);
@@ -125,8 +125,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: 
-        GoogleMap(
+      body: GoogleMap(
         mapType: MapType.hybrid,
         heatmaps: _heatmaps,
         initialCameraPosition: CameraPosition(
@@ -136,7 +135,6 @@ class _MyHomePageState extends State<MyHomePage> {
         onMapCreated: (GoogleMapController controller) {
           _controller.complete(controller);
         },
-        
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _refreshHeatmap,
@@ -145,23 +143,22 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+
   Future<void> _refreshHeatmap() async {
     setState(() {
-      _heatmaps.add(
-        Heatmap(
+      _heatmaps.add(Heatmap(
           heatmapId: HeatmapId(_heatmapLocation.toString()),
           points: _getPoints(_heatmapLocation),
           radius: 20,
           visible: true,
-          gradient:  HeatmapGradient(
-            colors: <Color>[Colors.green, Colors.red], startPoints: <double>[0.2, 0.8]
-          )
-        )
-      );
+          gradient: HeatmapGradient(
+              colors: <Color>[Colors.green, Colors.red],
+              startPoints: <double>[0.2, 0.8])));
     });
 
     // controller.animateCamera(CameraUpdate.newCameraPosition(_kLake));
   }
+
   List<WeightedLatLng> _getPoints(LatLng location) {
     final List<WeightedLatLng> points = <WeightedLatLng>[];
     final serverJSON = _getServerGPS();
@@ -178,26 +175,20 @@ class _MyHomePageState extends State<MyHomePage> {
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
-      _scaffoldKey.currentState.showSnackBar(
-        SnackBar(
-          content: new Text('Brrrrrrrrrrrr'),
-          duration: new Duration(seconds: 10),
-        )
-      );
+      _scaffoldKey.currentState.showSnackBar(SnackBar(
+        content: new Text('Brrrrrrrrrrrr'),
+        duration: new Duration(seconds: 10),
+      ));
       return response.body;
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.
 
-      _scaffoldKey.currentState.showSnackBar(
-        SnackBar(
-          content: new Text('Failed to contact server! Code: ${response.statusCode}'),
-          duration: new Duration(seconds: 10),
-        )
-      );
-
+      _scaffoldKey.currentState.showSnackBar(SnackBar(
+        content:
+            new Text('Failed to contact server! Code: ${response.statusCode}'),
+        duration: new Duration(seconds: 10),
+      ));
     }
   }
-
 }
-
