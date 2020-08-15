@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from flask import Flask, request, jsonify
 import pymysql
 
@@ -42,8 +43,8 @@ def location(device_id: int):
 def device():
     device = reg_device()
     if not False:
-        print("Device:",device)
-        return str(device),200
+        print("Device:", device)
+        return str(device), 200
 
     return '', 500
 
@@ -101,4 +102,5 @@ def get_GPS():
         return False
 
 
-app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', debug=True)
