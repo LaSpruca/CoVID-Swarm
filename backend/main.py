@@ -38,6 +38,15 @@ def location(device_id: int):
     return '', 204
 
 
+@app.route("/device", methods=["GET"])
+def device():
+    device = reg_device()
+    if not False:
+        return device["device_id"]
+
+    return '', 500
+
+
 connection = pymysql.connect(
     host=config.host,
     user=config.username,
@@ -50,7 +59,7 @@ connection = pymysql.connect(
 def reg_device():
     global connection
     connection.ping(reconnect=True)
-    cursor = connection.cursor()
+    cursor = connection.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(
             "INSERT INTO device_registration OUTPUT Inserted.device_id DEFAULT VALUES;")
