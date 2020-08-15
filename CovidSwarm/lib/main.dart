@@ -277,14 +277,23 @@ class Settings extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-            "Background upload is currently ${homePage.backgroundTaskEnabled ? "active" : "disabled"}"),
-        MaterialButton(
-          child: Text("Manual Update GPS"),
-          onPressed: updateGPS,
+        Row(
+          children: [
+            PaddedText("Enable background GPS upload"),
+            Switch(
+              value: homePage.backgroundTaskEnabled,
+              onChanged: (value) {
+                homePage.setState(() {
+                  homePage.backgroundTaskEnabled = value;
+                });
+              },
+            ),
+          ],
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
         ),
         MaterialButton(
-          child: Text("Toggle background task"),
+          child: PaddedText("Toggle background task"),
           onPressed: () {
             homePage.setState(() {
               homePage.backgroundTaskEnabled = !homePage.backgroundTaskEnabled;
@@ -292,7 +301,7 @@ class Settings extends StatelessWidget {
           },
         ),
         MaterialButton(
-            child: Text("Manual map update"),
+            child: PaddedText("Manual map update"),
             onPressed: () {
               homePage.setState(() {
                 homePage._refreshHeatmap();
@@ -301,8 +310,23 @@ class Settings extends StatelessWidget {
       ],
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
+      
     );
   }
 
   Settings(this.homePage);
+}
+
+
+class PaddedText extends StatelessWidget {
+  String text;
+  PaddedText(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      child: Text(text),
+      padding: EdgeInsets.all(10),
+    );
+  }
+
 }
