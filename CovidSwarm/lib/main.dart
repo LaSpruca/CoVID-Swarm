@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:ffi';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:CovidSwarm/get_location.dart';
 import 'package:background_fetch/background_fetch.dart';
 import 'dart:async';
@@ -13,24 +13,21 @@ Future<void> backgroundFetchHeadless(String taskID) {
   getPosition().then((value) async {
     location = value;
     print("Location: ${location.toString()}");
+    
+    var deviceID = await _getDeviceID();
     var client = http.Client();
-    // try {
-    //   var uriResponse = await client.post('http://swarm.qrl.nz/location/32948',
-    //     body: {'device_id' : "420", 'covid_status' : "false", 'latitude' : location.latitude, 'longitude' : location.longitude}
-    //     );
-    //   print("Server status code: "+ uriResponse.statusCode.toString());
-      
-    // } catch(e) {
-    //   print("Error on server post: "+e.toString());
-    // }
-    // finally {
-    //   client.close();
-    // }
-          var uriResponse = await client.post('http://swarm.qrl.nz/location/32948',
+    try {
+      var uriResponse = await client.post('http://swarm.qrl.nz/location/'+deviceID.toString(),
         body: jsonEncode({"covid_status" : false, "latitude" : location.latitude.toString(), "longitude" : location.longitude.toString()})
         );
       print("Server status code: "+ uriResponse.statusCode.toString());
+      
+    } catch(e) {
+      print("Error on server post: "+e.toString());
+    }
+    finally {
       client.close();
+    }
   });
 }
 
@@ -76,7 +73,6 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   Completer<GoogleMapController> _controller = Completer();
   Set<Heatmap> _heatmaps = {};
-  LatLng _heatmapLocation = LatLng(37.42796133580664, -122.085749655962);
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
   @override
@@ -155,12 +151,12 @@ class _MyHomePageState extends State<MyHomePage> {
     print("Server Points: "+ points.toString());
     setState(() {
       _heatmaps.add(Heatmap(
-          heatmapId: HeatmapId(_heatmapLocation.toString()),
+          heatmapId: HeatmapId("people_tracking"),
           points: points,
           radius: 50,
           visible: true,
           gradient: HeatmapGradient(
-              colors: <Color>[Colors.green, Colors.red],
+              colors: <Color>[Colors.blue, Colors.red],
               startPoints: <double>[0.2, 0.8])));
     });
 
@@ -207,9 +203,30 @@ class _MyHomePageState extends State<MyHomePage> {
       return "[]";
     }
   }
+  
 
   void _manuleUpdateGPS() {
     backgroundFetchHeadless("ManuleShit");
   }
   
 }
+
+Future<int> _getDeviceID() async {
+    
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey("device_id")) {
+      	return prefs.getInt("device_id");
+    } else {
+      final response = await http.get('http://swarm.qrl.nz/device');
+      if (response.statusCode == 200) {
+        prefs.setInt("device_id", int.parse(response.body));
+        return int.parse(response.body);
+      } else {
+        // If the server did not return a 200 OK response,
+        // then throw an exception.
+        print("Failed to reg with server, satus:"+response.statusCode.toString());
+        return -1;
+      }
+    }
+    
+  }
