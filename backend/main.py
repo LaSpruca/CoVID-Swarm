@@ -23,37 +23,37 @@ class CustomJSONEncoder(JSONEncoder):
             return list(iterable)
         return JSONEncoder.default(self, obj)
 
+
 app = Flask("CoVID-SWARM")
 app.json_encoder = CustomJSONEncoder
 
 
-@app.route("/location/<int:device_id>", methods=['POST', 'GET'])
-def location(device_id: int):
-    if request.method == 'POST':
-        # For JSON Payload
-        payload = request.get_json(force=True)
-        if payload is None:
-            return '', 204
+@app.route("/location/<int:device_id>", methods=['POST'])
+def update_location(device_id: int):
+    # For JSON Payload
+    payload = request.get_json(force=True)
+    if payload is None:
+        return '', 204
 
-        latitude = payload["latitude"]
-        longitude = payload["longitude"]
-        covid_status = payload["covid_status"]
+    latitude = payload["latitude"]
+    longitude = payload["longitude"]
+    covid_status = payload["covid_status"]
 
-        if not update_GPS(device_id, covid_status, latitude, longitude):
-            return '', 500
+    if not update_GPS(device_id, covid_status, latitude, longitude):
+        return '', 500
 
-        # Update location
-        # return "Longitude: {}, Latitude: {}, Covid: {}".format(longitude, latitude, covid_status), 200
-        return '', 200
-    elif request.method == 'GET':
-        # Get values from database
-        payload = get_GPS()
+    # Update location
+    # return "Longitude: {}, Latitude: {}, Covid: {}".format(longitude, latitude, covid_status), 200
+    return '', 200
 
-        # Get last location
-        return jsonify(payload)
 
-    # No content since didn't supply body
-    return '', 204
+@app.route("/location", methods=['GET'])
+def get_location():
+    # Get values from database
+    payload = get_GPS()
+
+    # Get last location
+    return jsonify(payload), 200
 
 
 @app.route("/device", methods=["GET"])
