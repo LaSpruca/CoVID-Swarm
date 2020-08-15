@@ -74,6 +74,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Completer<GoogleMapController> _controller = Completer();
   Set<Heatmap> _heatmaps = {};
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+  final GlobalKey<ScaffoldState> _mapScaffoldKey = new GlobalKey<ScaffoldState>();
   bool backgroundTaskEnabled = true;
   double currentZoom = 1;
   double heatmapZoom = 1;
@@ -108,21 +109,30 @@ class _MyHomePageState extends State<MyHomePage> {
             body: TabBarView(
               physics: NeverScrollableScrollPhysics(),
               children: [
-                GoogleMap(
-                  mapType: MapType.hybrid,
-                  heatmaps: _heatmaps,
-                  minMaxZoomPreference: MinMaxZoomPreference(1, 18),
-                  initialCameraPosition: CameraPosition(
-                    target: LatLng(-40.501210, 174.050287),
-                    zoom: 5,
+                Scaffold(
+                  key: _mapScaffoldKey,
+                  body: GoogleMap(
+                    mapType: MapType.hybrid,
+                    heatmaps: _heatmaps,
+                    minMaxZoomPreference: MinMaxZoomPreference(1, 18),
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(-40.501210, 174.050287),
+                      zoom: 5,
+                    ),
+                    onMapCreated: (GoogleMapController controller) {
+                      if (!_controller.isCompleted) {
+                        _controller.complete(controller);
+                      }
+                    },
+                    onCameraMove: _cameraMove,
+                    onCameraIdle: _cameraIdle,
                   ),
-                  onMapCreated: (GoogleMapController controller) {
-                    if (!_controller.isCompleted) {
-                      _controller.complete(controller);
-                    }
-                  },
-                  onCameraMove: _cameraMove,
-                  onCameraIdle: _cameraIdle,
+                  floatingActionButton: FloatingActionButton.extended(
+                    onPressed: _refreshHeatmap,
+                    label: Text("Refresh"),
+                    icon: Icon(Icons.refresh) ,
+                  ),
+
                 ),
                 Settings(this)
               ],
@@ -194,9 +204,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
       //Weight is based off how recent the data point is
       var pointTime = DateTime.parse(jsonGpsPoint["latest_time"]);
-      print("Time diff: "+((1 / ((currentTime.difference(pointTime).inSeconds) / 600))*10).toString());
+      print("Time diff: " +
+          ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
+              .round()
+              .toString());
       var timeDiff =
-          ((0.1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
+          ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
               .round();
       points.add(_createWeightedLatLng(
           jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], timeDiff));
@@ -222,7 +235,7 @@ class _MyHomePageState extends State<MyHomePage> {
         content: new Text('Brrrrrrrrrrrr'),
         duration: new Duration(seconds: 10),
       ));
-      print("Server responded with: "+ response.body);
+      print("Server responded with: " + response.body);
       return response.body;
     } else {
       // If the server did not return a 200 OK response,
@@ -282,7 +295,6 @@ class Settings extends StatelessWidget {
             child: Text("Manual map update"),
             onPressed: () {
               homePage.setState(() {
-                homePage._getServerGPS();
                 homePage._refreshHeatmap();
               });
             })
