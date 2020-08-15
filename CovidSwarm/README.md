@@ -1,4 +1,4 @@
-# covid19_swam
+# CovidSwarm
 
 A new Flutter project.
 

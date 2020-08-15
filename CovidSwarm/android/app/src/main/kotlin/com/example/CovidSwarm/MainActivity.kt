@@ -1,4 +1,4 @@
-package com.example.covid19_swam
+package com.example.CovidSwarm
 
 import io.flutter.embedding.android.FlutterActivity
 
