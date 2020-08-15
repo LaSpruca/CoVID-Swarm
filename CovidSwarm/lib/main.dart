@@ -12,24 +12,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 void updateGPS() {
   Pos location = Pos.err();
   getPosition().then((value) async {
-    location = value;
-    print("Location: ${location.toString()}");
-
-    var deviceID = await _getDeviceID();
-    var client = http.Client();
-    try {
-      var uriResponse = await client.post(
-          'http://swarm.qrl.nz/location/' + deviceID.toString(),
-          body: jsonEncode({
-            "covid_status": false,
-            "latitude": location.latitude.toString(),
-            "longitude": location.longitude.toString()
-          }));
-      print("Server status code: " + uriResponse.statusCode.toString());
-    } catch (e) {
-      print("Error on server post: " + e.toString());
-    } finally {
-      client.close();
+    if (value.error) {
+      location = value;
+      print("Location: ${location.toString()}");
+      var deviceID = await _getDeviceID();
+      var client = http.Client();
+      try {
+        var uriResponse = await client.post(
+            'http://swarm.qrl.nz/location/' + deviceID.toString(),
+            body: jsonEncode({
+              "covid_status": false,
+              "latitude": location.latitude.toString(),
+              "longitude": location.longitude.toString()
+            }));
+        print("Server status code: " + uriResponse.statusCode.toString());
+      } catch (e) {
+        print("Error on server post: " + e.toString());
+      } finally {
+        client.close();
+      }
     }
   });
 }
@@ -110,10 +111,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 GoogleMap(
                   mapType: MapType.hybrid,
                   heatmaps: _heatmaps,
-                  minMaxZoomPreference: MinMaxZoomPreference(1, 19),
+                  minMaxZoomPreference: MinMaxZoomPreference(1, 18),
                   initialCameraPosition: CameraPosition(
-                    target: LatLng(37.42796133580664, -122.085749655962),
-                    zoom: 1,
+                    target: LatLng(-40.501210, 174.050287),
+                    zoom: 5,
                   ),
                   onMapCreated: (GoogleMapController controller) {
                     if (!_controller.isCompleted) {
@@ -170,7 +171,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _heatmaps.add(Heatmap(
           heatmapId: HeatmapId("people_tracking"),
           points: points,
-          radius: (10 * currentZoom).round(),
+          radius: (10 * currentZoom).round().clamp(5, 50),
           visible: true,
           gradient: HeatmapGradient(
               colors: <Color>[Colors.blue, Colors.red],
@@ -193,8 +194,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
       //Weight is based off how recent the data point is
       var pointTime = DateTime.parse(jsonGpsPoint["latest_time"]);
+      print("Time diff: "+((1 / ((currentTime.difference(pointTime).inSeconds) / 600))*10).toString());
       var timeDiff =
-          ((1 / ((currentTime.difference(pointTime).inSeconds) / 60)) * 100)
+          ((0.1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
               .round();
       points.add(_createWeightedLatLng(
           jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], timeDiff));
