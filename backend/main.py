@@ -78,8 +78,16 @@ def device():
 @app.route("/covid", methods=["GET"])
 def covid_cases():
     payload = get_active_cases()
+    if not False:   
+        return jsonify(payload), 200
+    return '',500
 
-    return jsonify(payload), 200
+@app.route("/app/version", methods=["GET"])
+def app_version():
+    payload = get_latest_app_version()
+    if not False:
+        return jsonify(payload), 200
+    return '', 500
 
 
 def reg_device():
@@ -135,10 +143,25 @@ def get_active_cases():
     try:
         cursor.execute(query)
         result = cursor.fetchall()
-        print("Result: ", result)
+        print("Active cases result: ", result)
         return result
     except Exception as e:
         print("Get CoVID Failed, Error:", e)
+        return False
+
+def get_latest_app_version():
+    global connection
+    connection.ping(reconnect=True)
+    cursor = connection.cursor(cursor=pymysql.cursors.DictCursor)
+    query = "SELECT * FROM app_version"
+
+    try:
+        cursor.execute(query)
+        result = cursor.fetchone()
+        print("App version result: ", result)
+        return result
+    except Exception as e:
+        print("Getting covid cases failed, Error:", e)
         return False
 
 
