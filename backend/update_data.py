@@ -34,6 +34,7 @@ def get_data():
 
 
 def get_data_as_json():
+    # Get formatted data as json
     data = get_data()
     json = [{
         "date": datetime.now(),
@@ -68,6 +69,15 @@ def parse_json():
         }
     }
 
+    confirmed = [
+        {
+            "name": "",
+            "latitude": 0.0000,
+            "longitude": 0.0000,
+            "confirmed": 0
+        }
+    ]
+
     # Map locs to lat, long
     with open("locations.txt") as locations:
         for line in locations:
@@ -80,12 +90,23 @@ def parse_json():
                     "longitude": longitude.rstrip()
                 }
             })
+            confirmed.append({
+                "name": name,
+                "latitude": latitude,
+                "longitude": longitude.rstrip(),
+                "confirmed": 0
+            })
 
-    for object in json:
-        object["latitude"] = locs[object["location"]]["latitude"]
-        object["longitude"] = locs[object["location"]]["longitude"]
+    confirmed[0] = None
+    for o in confirmed:
+        if o is None:
+            continue
+        for object in json:
+            # Increment confirmed
+            if object["location"] == o["name"]:
+                o["confirmed"] = o["confirmed"] + 1
 
-    return json
+    return confirmed
 
 
 connection = pymysql.connect(
@@ -114,11 +135,13 @@ def upload_data():
 
     connection.ping(reconnect=True)
     cursor = connection.cursor()
-    query = "INSERT INTO covid_cases (date, latitude, longitude) VALUES (%s, %s, %s)"
+    query = "INSERT INTO covid_cases (name, latitude, longitude, confirmed) VALUES (%s, %s, %s, %s)"
     for object in json:
+        if object is None:
+            continue
         try:
             cursor.execute(
-                query, (object["date"], object["latitude"], object["longitude"]))
+                query, (object["name"], object["latitude"], object["longitude"], object["confirmed"]))
             connection.commit()
         except Exception as e:
             print("Could not update CoVID data, Error:", e)
@@ -131,3 +154,4 @@ download_data()
 print("Uploading data into database")
 clear_data()
 upload_data()
+print("Done.")
