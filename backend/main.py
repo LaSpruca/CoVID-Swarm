@@ -84,7 +84,7 @@ def covid_cases():
 
 @app.route("/app/version", methods=["GET"])
 def app_version():
-    payload = get_active_cases()
+    payload = get_latest_app_version()
     if not False:
         return jsonify(payload), 200
     return '', 500
