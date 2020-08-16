@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:CovidSwarm/get_location.dart';
 import 'package:background_fetch/background_fetch.dart';
+import 'package:flutter/rendering.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
@@ -114,28 +116,25 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             body: TabBarView(
               physics: NeverScrollableScrollPhysics(),
-              children: [
-                MapPage(this),
-                Settings(this)
-              ],
+              children: [MapPage(this), Settings(this)],
             )));
   }
 
   Future<void> initPlatformState() async {
     BackgroundFetch.configure(
-            BackgroundFetchConfig(
-                minimumFetchInterval: 30,
-                stopOnTerminate: false,
-                enableHeadless: true,
-                requiresBatteryNotLow: true,
-                requiresCharging: false,
-                requiresStorageNotLow: false,
-                requiresDeviceIdle: false,
-                requiredNetworkType: NetworkType.ANY), (String taskId) async {
+        BackgroundFetchConfig(
+            minimumFetchInterval: 30,
+            stopOnTerminate: false,
+            enableHeadless: true,
+            requiresBatteryNotLow: true,
+            requiresCharging: false,
+            requiresStorageNotLow: false,
+            requiresDeviceIdle: false,
+            requiredNetworkType: NetworkType.ANY), (String taskId) async {
       print("[BackgroundFetch], received $taskId]");
     })
         .then((int status) =>
-            {print("[BackgroundFetch], configure success: $status")})
+    {print("[BackgroundFetch], configure success: $status")})
         .catchError((e) => {print("[BackgroundFetch], configure failure: $e")});
 
     if (!mounted) return;
@@ -207,7 +206,9 @@ class _MyHomePageState extends State<MyHomePage> {
       //Weight is based off how recent the data point is
       var pointTime = DateTime.parse(jsonGpsPoint["latest_time"]);
       print("Time diff: " +
-          ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
+          ((1 / ((currentTime
+              .difference(pointTime)
+              .inSeconds) / 600)) * 10)
               .round()
               .toString());
       var pointWeight =
@@ -231,10 +232,6 @@ class _MyHomePageState extends State<MyHomePage> {
     final response = await http.get('http://swarmapi.qrl.nz/location');
 
     if (response.statusCode == 200) {
-      _scaffoldKey.currentState.showSnackBar(SnackBar(
-        content: new Text('Brrrrrrrrrrrr'),
-        duration: new Duration(seconds: 5),
-      ));
       print("Server responded with: " + response.body);
       return response.body;
     } else {
@@ -331,7 +328,9 @@ class Settings extends StatelessWidget {
 
 class PaddedText extends StatelessWidget {
   String text;
+
   PaddedText(this.text);
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -341,7 +340,6 @@ class PaddedText extends StatelessWidget {
   }
 }
 class MapPage extends StatelessWidget {
-
   _MyHomePageState parent;
 
   MapPage(this.parent);
@@ -366,11 +364,44 @@ class MapPage extends StatelessWidget {
         onCameraMove: parent._cameraMove,
         onCameraIdle: parent._cameraIdle,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: parent._refreshHeatmap,
-        label: Text("Refresh"),
-        icon: Icon(Icons.refresh) ,
-      ),
+      floatingActionButton: Stack(children: [
+        Align(
+            alignment: Alignment.bottomRight,
+            child: FloatingActionButton.extended(
+              onPressed: parent._refreshHeatmap,
+              label: Text("Refresh"),
+              icon: Icon(Icons.refresh),
+            )),
+        Align(
+          alignment: Alignment.topLeft,
+          child: Padding(
+              child: FloatingActionButton.extended(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      // return object of type Dialog
+                      return AlertDialog(
+                        title: new Text("Alert Dialog title"),
+                        content: new Text("Alert Dialog body"),
+                        actions: <Widget>[
+                          // usually buttons at the bottom of the dialog
+                          new FlatButton(
+                            child: new Text("Close"),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                label: Icon(Icons.settings),
+              ),
+              padding: EdgeInsets.fromLTRB(25, 30, 0, 0)),
+        )
+      ]),
     );
   }
 
