@@ -88,6 +88,9 @@ class _MyHomePageState extends State<MyHomePage> {
   double currentZoom = 1;
   double heatmapZoom = 1;
 
+  bool heatmapVissable = true;
+  bool coronaCaseVissable = true;
+
   @override
   void initState() {
     super.initState();
@@ -159,12 +162,13 @@ class _MyHomePageState extends State<MyHomePage> {
     print("Zoom in refresh heatmap function: " + currentZoom.toString());
     var points = await _getPoints();
     print("Server Points: " + points.toString());
+    print("Heat map Visibility: $heatmapVissable");
     setState(() {
       _heatmaps.add(Heatmap(
           heatmapId: HeatmapId("people_tracking"),
           points: points,
           radius: (10 * currentZoom).round().clamp(5, 50),
-          visible: true,
+          visible: heatmapVissable,
           gradient: HeatmapGradient(
               colors: <Color>[Colors.blue, Colors.red],
               startPoints: <double>[0.2, 0.8])));
@@ -179,8 +183,11 @@ class _MyHomePageState extends State<MyHomePage> {
     if (response.statusCode == 200) {
       print("Server responded with: " + response.body);
       var remoteVersionJson = jsonDecode(response.body);
-      print("Server major version is "+remoteVersionJson["major_version"].toString());
-      return !(remoteVersionJson["major_version"] == appVersion[0] && remoteVersionJson["minor_version"] == appVersion[1] && remoteVersionJson["patch_version"] == appVersion[2]);
+      print("Server major version is " +
+          remoteVersionJson["major_version"].toString());
+      return !(remoteVersionJson["major_version"] == appVersion[0] &&
+          remoteVersionJson["minor_version"] == appVersion[1] &&
+          remoteVersionJson["patch_version"] == appVersion[2]);
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.
@@ -323,12 +330,12 @@ class Settings extends StatelessWidget {
                       FlatButton(
                         child: Text('Download'),
                         onPressed: () async {
-                            const url = 'http://swarm.qrl.nz';
-                            if (await canLaunch(url)) {
-                              await launch(url);
-                            } else {
-                              throw 'Could not launch $url';
-                            }
+                          const url = 'http://swarm.qrl.nz';
+                          if (await canLaunch(url)) {
+                            await launch(url);
+                          } else {
+                            throw 'Could not launch $url';
+                          }
                           Navigator.of(context).pop();
                         },
                       ),
@@ -379,6 +386,71 @@ class MapPage extends StatelessWidget {
 
   MapPage(this.parent);
 
+  void _showDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        bool heatmapVissable = parent.heatmapVissable;
+        bool coronaVisable = parent.coronaCaseVissable;
+        return AlertDialog(
+          title: new Text("Select thing to show on map"),
+          content: Container(
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    PaddedText("Show heat map"),
+                    Switch(
+                      value: heatmapVissable,
+                      onChanged: (value) {
+                        parent.setState(() {
+                          parent.heatmapVissable = value;
+                          parent._refreshHeatmap();
+                        });
+                        heatmapVissable = value;
+                        Navigator.of(context).pop();
+                        _showDialog(context);
+                      },
+                    )
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    PaddedText("Show corona cases"),
+                    Switch(
+                      value: coronaVisable,
+                      onChanged: (value) {
+                        parent
+                            .setState(() => parent.coronaCaseVissable = value);
+                        coronaVisable = value;
+                        Navigator.of(context).pop();
+                        _showDialog(context);
+                      },
+                    )
+                  ],
+                ),
+              ],
+            ),
+            height: 100,
+          ),
+          actions: <Widget>[
+            // usually buttons at the bottom of the dialog
+            new FlatButton(
+              child: new Text("Close"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -412,25 +484,7 @@ class MapPage extends StatelessWidget {
           child: Padding(
               child: FloatingActionButton.extended(
                 onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      // return object of type Dialog
-                      return AlertDialog(
-                        title: new Text("Alert Dialog title"),
-                        content: new Text("Alert Dialog body"),
-                        actions: <Widget>[
-                          // usually buttons at the bottom of the dialog
-                          new FlatButton(
-                            child: new Text("Close"),
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  );
+                  _showDialog(context);
                 },
                 label: Icon(Icons.settings),
               ),
