@@ -157,9 +157,9 @@ def get_latest_app_version():
 
     try:
         cursor.execute(query)
-        result = cursor.fetchone()
-        print("App version result: ", result)
-        return result
+        result = cursor.fetchall()
+        print("App version result: ", result[0])
+        return result[0]
     except Exception as e:
         print("Getting covid cases failed, Error:", e)
         return False
