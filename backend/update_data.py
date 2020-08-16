@@ -12,8 +12,12 @@ except Exception:
 
 current_time = datetime.now()
 
+formatted_year = current_time.strftime("%Y")[2:]
+formatted_time = (current_time.strftime("%d%b") + formatted_year).lower()
+
 # Link to download .csv file, update link based on current data
-url = 'https://www.health.govt.nz/system/files/documents/pages/covid-cases-15aug20.xlsx'
+url = 'https://www.health.govt.nz/system/files/documents/pages/covid-cases-' + \
+    formatted_time + '.xlsx'
 
 
 def download_data():
@@ -49,7 +53,7 @@ def get_data_as_json():
 
     # Get rid of null data
     filtered_json = [
-        x for x in filtered_json if not x['location'] == ""
+        x for x in filtered_json if not x['location'] == "" and not x['location'] == 'Managed isolation & quarantine'
     ]
 
     return filtered_json
