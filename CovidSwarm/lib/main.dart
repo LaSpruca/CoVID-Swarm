@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:CovidSwarm/get_location.dart';
 import 'package:background_fetch/background_fetch.dart';
@@ -9,27 +8,33 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const version = [1,0,0];
+
 void updateGPS() {
+  print("Updating GPS location");
   Pos location = Pos.err();
   getPosition().then((value) async {
-    location = value;
-    print("Location: ${location.toString()}");
-
-    var deviceID = await _getDeviceID();
-    var client = http.Client();
-    try {
-      var uriResponse = await client.post(
-          'http://swarm.qrl.nz/location/' + deviceID.toString(),
-          body: jsonEncode({
-            "covid_status": false,
-            "latitude": location.latitude.toString(),
-            "longitude": location.longitude.toString()
-          }));
-      print("Server status code: " + uriResponse.statusCode.toString());
-    } catch (e) {
-      print("Error on server post: " + e.toString());
-    } finally {
-      client.close();
+    if (!value.error) {
+      location = value;
+      print("Location: ${location.toString()}");
+      var deviceID = await _getDeviceID();
+      var client = http.Client();
+      try {
+        var uriResponse = await client.post(
+            'http://swarm.qrl.nz/location/' + deviceID.toString(),
+            body: jsonEncode({
+              "covid_status": false,
+              "latitude": location.latitude.toString(),
+              "longitude": location.longitude.toString()
+            }));
+        print("Server status code: " + uriResponse.statusCode.toString());
+      } catch (e) {
+        print("Error on server post: " + e.toString());
+      } finally {
+        client.close();
+      }
+    } else {
+      print("GPS failed: "+value.error.toString());
     }
   });
 }
@@ -73,6 +78,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Completer<GoogleMapController> _controller = Completer();
   Set<Heatmap> _heatmaps = {};
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+  final GlobalKey<ScaffoldState> _mapScaffoldKey =
+      new GlobalKey<ScaffoldState>();
   bool backgroundTaskEnabled = true;
   double currentZoom = 1;
   double heatmapZoom = 1;
@@ -107,22 +114,7 @@ class _MyHomePageState extends State<MyHomePage> {
             body: TabBarView(
               physics: NeverScrollableScrollPhysics(),
               children: [
-                GoogleMap(
-                  mapType: MapType.hybrid,
-                  heatmaps: _heatmaps,
-                  minMaxZoomPreference: MinMaxZoomPreference(1, 19),
-                  initialCameraPosition: CameraPosition(
-                    target: LatLng(37.42796133580664, -122.085749655962),
-                    zoom: 1,
-                  ),
-                  onMapCreated: (GoogleMapController controller) {
-                    if (!_controller.isCompleted) {
-                      _controller.complete(controller);
-                    }
-                  },
-                  onCameraMove: _cameraMove,
-                  onCameraIdle: _cameraIdle,
-                ),
+                MapPage(this),
                 Settings(this)
               ],
             )));
@@ -170,7 +162,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _heatmaps.add(Heatmap(
           heatmapId: HeatmapId("people_tracking"),
           points: points,
-          radius: (10 * currentZoom).round(),
+          radius: (10 * currentZoom).round().clamp(5, 50),
           visible: true,
           gradient: HeatmapGradient(
               colors: <Color>[Colors.blue, Colors.red],
@@ -193,18 +185,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
       //Weight is based off how recent the data point is
       var pointTime = DateTime.parse(jsonGpsPoint["latest_time"]);
-      var timeDiff =
-          ((1 / ((currentTime.difference(pointTime).inSeconds) / 60)) * 100)
+      print("Time diff: " +
+          ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
+              .round()
+              .toString());
+      var pointWeight =
+          ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
               .round();
-      points.add(_createWeightedLatLng(
-          jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], timeDiff));
+      if (pointWeight > 0) {
+        points.add(_createWeightedLatLng(
+          jsonGpsPoint["latitude"], 
+          jsonGpsPoint["longitude"], 
+          pointWeight));
+      }
     }
-
-    // if (numberOfPoints > 50) {
-    //   return points;
-    // } else {
-    //   return <WeightedLatLng>[];
-    // }
     return points;
   }
 
@@ -220,7 +214,7 @@ class _MyHomePageState extends State<MyHomePage> {
         content: new Text('Brrrrrrrrrrrr'),
         duration: new Duration(seconds: 10),
       ));
-      print("Server responded with: "+ response.body);
+      print("Server responded with: " + response.body);
       return response.body;
     } else {
       // If the server did not return a 200 OK response,
@@ -262,28 +256,42 @@ class Settings extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-            "Background upload is currently ${homePage.backgroundTaskEnabled ? "active" : "disabled"}"),
-        MaterialButton(
-          child: Text("Manual Update GPS"),
-          onPressed: updateGPS,
+        Row(
+          children: [
+            PaddedText("Enable background GPS upload"),
+            Switch(
+              value: homePage.backgroundTaskEnabled,
+              onChanged: (value) {
+                homePage.setState(() {
+                  homePage.backgroundTaskEnabled = value;
+                });
+              },
+            ),
+          ],
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
         ),
         MaterialButton(
-          child: Text("Toggle background task"),
+          child: PaddedText("Push current location"),
           onPressed: () {
-            homePage.setState(() {
-              homePage.backgroundTaskEnabled = !homePage.backgroundTaskEnabled;
-            });
+            print("Manule GPS push");
+            updateGPS();
           },
         ),
         MaterialButton(
-            child: Text("Manual map update"),
+            child: PaddedText("Manual map update"),
             onPressed: () {
               homePage.setState(() {
-                homePage._getServerGPS();
                 homePage._refreshHeatmap();
               });
-            })
+            }),
+        MaterialButton (
+          child: PaddedText("Register as new device"),
+          onPressed: () async {
+            final SharedPreferences prefs = await SharedPreferences.getInstance();
+            prefs.clear();
+          },
+          )
       ],
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -291,4 +299,51 @@ class Settings extends StatelessWidget {
   }
 
   Settings(this.homePage);
+}
+
+class PaddedText extends StatelessWidget {
+  String text;
+  PaddedText(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      child: Text(text),
+      padding: EdgeInsets.all(10),
+    );
+  }
+}
+class MapPage extends StatelessWidget {
+
+  _MyHomePageState parent;
+
+  MapPage(this.parent);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: parent._mapScaffoldKey,
+      body: GoogleMap(
+        mapType: MapType.hybrid,
+        heatmaps: parent._heatmaps,
+        minMaxZoomPreference: MinMaxZoomPreference(1, 18),
+        initialCameraPosition: CameraPosition(
+          target: LatLng(-40.501210, 174.050287),
+          zoom: 5,
+        ),
+        onMapCreated: (GoogleMapController controller) {
+          if (!parent._controller.isCompleted) {
+            parent._controller.complete(controller);
+          }
+        },
+        onCameraMove: parent._cameraMove,
+        onCameraIdle: parent._cameraIdle,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: parent._refreshHeatmap,
+        label: Text("Refresh"),
+        icon: Icon(Icons.refresh) ,
+      ),
+    );
+  }
+
 }
