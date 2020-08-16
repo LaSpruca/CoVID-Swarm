@@ -102,6 +102,35 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    SharedPreferences.getInstance().then((prefs) {
+      if (!prefs.containsKey("firstUse")) {
+        prefs.setBool("firstUse", false);
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Welcome to CoVID swarm'),
+              content: Center(
+                  child: Column(
+                children: [
+                  new Image.asset("assets/logoAnimation.gif"),
+                  PaddedText("")
+                ],
+              )),
+              actions: <Widget>[
+                FlatButton(
+                  child: Text('close'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                )
+              ],
+            );
+          },
+        );
+      }
+    });
     return DefaultTabController(
         length: 2,
         child: Scaffold(
@@ -173,14 +202,37 @@ class _MyHomePageState extends State<MyHomePage> {
     // controller.animateCamera(CameraUpdate.newCameraPosition(_kLake));
   }
 
+  Future<void> _refeshCovidCases() async {
+    print("Refreshing Heatmap, Scaled points radis: " +
+        (10 * currentZoom).round().toString());
+    print("Zoom in refresh heatmap function: " + currentZoom.toString());
+    var points = await _getPoints();
+    print("Server Points: " + points.toString());
+    setState(() {
+      _heatmaps.add(Heatmap(
+          heatmapId: HeatmapId("people_tracking"),
+          points: points,
+          radius: (10 * currentZoom).round().clamp(5, 50),
+          visible: true,
+          gradient: HeatmapGradient(
+              colors: <Color>[Colors.blue, Colors.red],
+              startPoints: <double>[0.2, 0.8])));
+    });
+
+    // controller.animateCamera(CameraUpdate.newCameraPosition(_kLake));
+  }
+
   Future<bool> _checkAppVersion() async {
     final response = await http.get('http://swarmapi.qrl.nz/app/version');
 
     if (response.statusCode == 200) {
       print("Server responded with: " + response.body);
       var remoteVersionJson = jsonDecode(response.body);
-      print("Server major version is "+remoteVersionJson["major_version"].toString());
-      return !(remoteVersionJson["major_version"] == appVersion[0] && remoteVersionJson["minor_version"] == appVersion[1] && remoteVersionJson["patch_version"] == appVersion[2]);
+      print("Server major version is " +
+          remoteVersionJson["major_version"].toString());
+      return !(remoteVersionJson["major_version"] == appVersion[0] &&
+          remoteVersionJson["minor_version"] == appVersion[1] &&
+          remoteVersionJson["patch_version"] == appVersion[2]);
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.
@@ -219,6 +271,24 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     }
     return points;
+  }
+
+  _getCovidCases() async {
+    print("Geting server points");
+    final response = await http.get('http://swarmapi.qrl.nz/location');
+    if (response.statusCode == 200) {
+      print("Server responded with: " + response.body);
+      var locations = json.decode(response.body);
+    } else {
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+
+      _scaffoldKey.currentState.showSnackBar(SnackBar(
+        content:
+            new Text('Failed to contact server! Code: ${response.statusCode}'),
+        duration: new Duration(seconds: 5),
+      ));
+    }
   }
 
   WeightedLatLng _createWeightedLatLng(double lat, double lng, int weight) {
@@ -323,12 +393,12 @@ class Settings extends StatelessWidget {
                       FlatButton(
                         child: Text('Download'),
                         onPressed: () async {
-                            const url = 'http://swarm.qrl.nz';
-                            if (await canLaunch(url)) {
-                              await launch(url);
-                            } else {
-                              throw 'Could not launch $url';
-                            }
+                          const url = 'http://swarm.qrl.nz';
+                          if (await canLaunch(url)) {
+                            await launch(url);
+                          } else {
+                            throw 'Could not launch $url';
+                          }
                           Navigator.of(context).pop();
                         },
                       ),
