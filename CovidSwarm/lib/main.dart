@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:CovidSwarm/get_location.dart';
 import 'package:background_fetch/background_fetch.dart';
 import 'dart:async';
@@ -8,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const version = [1,0,0];
+const appVersion = [1,0,0];
 
 void updateGPS() {
   print("Updating GPS location");
@@ -21,7 +22,7 @@ void updateGPS() {
       var client = http.Client();
       try {
         var uriResponse = await client.post(
-            'http://swarm.qrl.nz/location/' + deviceID.toString(),
+            'http://swarmapi.qrl.nz/location/' + deviceID.toString(),
             body: jsonEncode({
               "covid_status": false,
               "latitude": location.latitude.toString(),
@@ -172,6 +173,26 @@ class _MyHomePageState extends State<MyHomePage> {
     // controller.animateCamera(CameraUpdate.newCameraPosition(_kLake));
   }
 
+  Future<bool>_checkAppVersion() async {
+    final response = await http.get('http://swarmapi.qrl.nz/app/version');
+
+    if (response.statusCode == 200) {
+      print("Server responded with: " + response.body);
+      var remoteVersionJson = jsonDecode(response.body);
+      return ListEquality().equals( [remoteVersionJson["major_version"] + remoteVersionJson["minor_version"] + remoteVersionJson["patch_version"]],appVersion);
+
+    } else {
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+
+      _scaffoldKey.currentState.showSnackBar(SnackBar(
+        content:
+            new Text('Failed to check version! Code: ${response.statusCode}'),
+        duration: new Duration(seconds: 5),
+      ));
+    }
+  }
+
   Future<List<WeightedLatLng>> _getPoints() async {
     final List<WeightedLatLng> points = <WeightedLatLng>[];
 
@@ -207,12 +228,12 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<String> _getServerGPS() async {
-    final response = await http.get('http://swarm.qrl.nz/location');
+    final response = await http.get('http://swarmapi.qrl.nz/location');
 
     if (response.statusCode == 200) {
       _scaffoldKey.currentState.showSnackBar(SnackBar(
         content: new Text('Brrrrrrrrrrrr'),
-        duration: new Duration(seconds: 10),
+        duration: new Duration(seconds: 5),
       ));
       print("Server responded with: " + response.body);
       return response.body;
@@ -223,7 +244,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _scaffoldKey.currentState.showSnackBar(SnackBar(
         content:
             new Text('Failed to contact server! Code: ${response.statusCode}'),
-        duration: new Duration(seconds: 10),
+        duration: new Duration(seconds: 5),
       ));
       return "[]";
     }
@@ -235,7 +256,7 @@ Future<int> _getDeviceID() async {
   if (prefs.containsKey("device_id")) {
     return prefs.getInt("device_id");
   } else {
-    final response = await http.get('http://swarm.qrl.nz/device');
+    final response = await http.get('http://swarmapi.qrl.nz/device');
     if (response.statusCode == 200) {
       prefs.setInt("device_id", int.parse(response.body));
       return int.parse(response.body);
@@ -291,7 +312,14 @@ class Settings extends StatelessWidget {
             final SharedPreferences prefs = await SharedPreferences.getInstance();
             prefs.clear();
           },
-          )
+          ),
+        MaterialButton (
+          child: PaddedText("Check for updates"),
+          onPressed: () async {
+            homePage._checkAppVersion();
+          },
+        ),
+          PaddedText("App Version: " + appVersion[0].toString() + "." + appVersion[1].toString() + "." + appVersion[2].toString())
       ],
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
