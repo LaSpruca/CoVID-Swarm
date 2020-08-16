@@ -90,7 +90,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Set<Heatmap> _heatmaps = {};
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   final GlobalKey<ScaffoldState> _mapScaffoldKey =
-  new GlobalKey<ScaffoldState>();
+      new GlobalKey<ScaffoldState>();
   bool backgroundTaskEnabled = true;
   double currentZoom = 1;
   double heatmapZoom = 1;
@@ -136,19 +136,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> initPlatformState() async {
     BackgroundFetch.configure(
-        BackgroundFetchConfig(
-            minimumFetchInterval: 30,
-            stopOnTerminate: false,
-            enableHeadless: true,
-            requiresBatteryNotLow: true,
-            requiresCharging: false,
-            requiresStorageNotLow: false,
-            requiresDeviceIdle: false,
-            requiredNetworkType: NetworkType.ANY), (String taskId) async {
+            BackgroundFetchConfig(
+                minimumFetchInterval: 30,
+                stopOnTerminate: false,
+                enableHeadless: true,
+                requiresBatteryNotLow: true,
+                requiresCharging: false,
+                requiresStorageNotLow: false,
+                requiresDeviceIdle: false,
+                requiredNetworkType: NetworkType.ANY), (String taskId) async {
       print("[BackgroundFetch], received $taskId]");
     })
         .then((int status) =>
-    {print("[BackgroundFetch], configure success: $status")})
+            {print("[BackgroundFetch], configure success: $status")})
         .catchError((e) => {print("[BackgroundFetch], configure failure: $e")});
 
     if (backgroundTaskEnabled) {
@@ -212,7 +212,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
       _scaffoldKey.currentState.showSnackBar(SnackBar(
         content:
-        new Text('Failed to check version! Code: ${response.statusCode}'),
+            new Text('Failed to check version! Code: ${response.statusCode}'),
         duration: new Duration(seconds: 5),
       ));
     }
@@ -232,16 +232,12 @@ class _MyHomePageState extends State<MyHomePage> {
       //Weight is based off how recent the data point is
       var pointTime = DateTime.parse(jsonGpsPoint["latest_time"]);
       print("Time diff: " +
-          ((1 / ((currentTime
-              .difference(pointTime)
-              .inSeconds) / 600)) * 10)
+          ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
               .round()
               .toString());
       var pointWeight =
-      ((1 / ((currentTime
-          .difference(pointTime)
-          .inSeconds) / 600)) * 10)
-          .round();
+          ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
+              .round();
       if (pointWeight > 0) {
         points.add(_createWeightedLatLng(
             jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], 1));
@@ -266,7 +262,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
       _scaffoldKey.currentState.showSnackBar(SnackBar(
         content:
-        new Text('Failed to contact server! Code: ${response.statusCode}'),
+            new Text('Failed to contact server! Code: ${response.statusCode}'),
         duration: new Duration(seconds: 5),
       ));
       return "[]";
@@ -285,7 +281,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
       _scaffoldKey.currentState.showSnackBar(SnackBar(
         content:
-        new Text('Failed to contact server! Code: ${response.statusCode}'),
+            new Text('Failed to contact server! Code: ${response.statusCode}'),
         duration: new Duration(seconds: 5),
       ));
       return "[]";
@@ -293,15 +289,30 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> loadPoints() async {
+    if (!coronaCaseVissable) {
+      markers = [];
+      return;
+    }
+
     var response = await _getServerCovid();
     print("Server response: $response");
     var parsed = json.decode(response);
 
+    markers = [];
+
     for (var point in parsed) {
       markers.add(Marker(
-        markerId: MarkerId(point['name']),
-        position: LatLng(point['latitude'], point['longitude']),
-          onTap: () => {}));
+          markerId: MarkerId(point['name']),
+          position: LatLng(point['latitude'], point['longitude']),
+          onTap: () => {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text(point["name"]),
+                    content: Text("Confirmed Cases: ${point['confirmed']}"),
+                  ),
+                )
+              }));
       print('added marker for ${point['name']}');
     }
     setState(() {});
@@ -345,14 +356,14 @@ class Settings extends StatelessWidget {
                   if (homePage.backgroundTaskEnabled) {
                     BackgroundFetch.start()
                         .then((value) =>
-                        print("[BackgroundFetch] started, code $value"))
+                            print("[BackgroundFetch] started, code $value"))
                         .catchError((err) {
                       print("[BackgroundFetch] error starting, code $err");
                     });
                   } else {
                     BackgroundFetch.stop()
                         .then((value) =>
-                        print("[BackgroundFetch] stopped, code $value"))
+                            print("[BackgroundFetch] stopped, code $value"))
                         .catchError((err) {
                       print("[BackgroundFetch] error stopping, code $err");
                     });
@@ -382,7 +393,7 @@ class Settings extends StatelessWidget {
           child: PaddedText("Register as new device"),
           onPressed: () async {
             final SharedPreferences prefs =
-            await SharedPreferences.getInstance();
+                await SharedPreferences.getInstance();
             prefs.clear();
           },
         ),
@@ -497,8 +508,10 @@ class MapPage extends StatelessWidget {
                     Switch(
                       value: coronaVisable,
                       onChanged: (value) {
-                        parent
-                            .setState(() => parent.coronaCaseVissable = value);
+                        parent.setState(() {
+                          parent.coronaCaseVissable = value;
+                          parent.loadPoints();
+                        });
                         coronaVisable = value;
                         Navigator.of(context).pop();
                         _showDialog(context);
@@ -530,32 +543,32 @@ class MapPage extends StatelessWidget {
     return Scaffold(
       key: parent._mapScaffoldKey,
       body: GoogleMap(
-          mapType: MapType.hybrid,
-          heatmaps: parent._heatmaps,
-          minMaxZoomPreference: MinMaxZoomPreference(1, 18),
-          initialCameraPosition: CameraPosition(
-            target: LatLng(-40.501210, 174.050287),
-            zoom: 5,
-          ),
-          onMapCreated: (GoogleMapController controller) {
-            if (!parent._controller.isCompleted) {
-              parent._controller.complete(controller);
-            }
-          },
-          onCameraMove: parent._cameraMove,
-          onCameraIdle: parent._cameraIdle,
-          markers: parent.markers.toSet(),
+        mapType: MapType.hybrid,
+        heatmaps: parent._heatmaps,
+        minMaxZoomPreference: MinMaxZoomPreference(1, 18),
+        initialCameraPosition: CameraPosition(
+          target: LatLng(-40.501210, 174.050287),
+          zoom: 5,
+        ),
+        onMapCreated: (GoogleMapController controller) {
+          if (!parent._controller.isCompleted) {
+            parent._controller.complete(controller);
+          }
+        },
+        onCameraMove: parent._cameraMove,
+        onCameraIdle: parent._cameraIdle,
+        markers: parent.markers.toSet(),
       ),
       floatingActionButton: Stack(children: [
         Align(
             alignment: Alignment.bottomRight,
             child: FloatingActionButton.extended(
               onPressed: () {
-                  parent._refreshHeatmap;
-                  parent.setState(() {
-                    parent.loadPoints();
-                  });
-                },
+                parent._refreshHeatmap;
+                parent.setState(() {
+                  parent.loadPoints();
+                });
+              },
               label: Text("Refresh"),
               icon: Icon(Icons.refresh),
             )),
