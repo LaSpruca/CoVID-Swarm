@@ -10,8 +10,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-const appVersion = [1,0,0];
+const appVersion = [1, 0, 0];
 
 void updateGPS() {
   print("Updating GPS location");
@@ -37,7 +38,7 @@ void updateGPS() {
         client.close();
       }
     } else {
-      print("GPS failed: "+value.error.toString());
+      print("GPS failed: " + value.error.toString());
     }
   });
 }
@@ -122,19 +123,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> initPlatformState() async {
     BackgroundFetch.configure(
-        BackgroundFetchConfig(
-            minimumFetchInterval: 30,
-            stopOnTerminate: false,
-            enableHeadless: true,
-            requiresBatteryNotLow: true,
-            requiresCharging: false,
-            requiresStorageNotLow: false,
-            requiresDeviceIdle: false,
-            requiredNetworkType: NetworkType.ANY), (String taskId) async {
+            BackgroundFetchConfig(
+                minimumFetchInterval: 30,
+                stopOnTerminate: false,
+                enableHeadless: true,
+                requiresBatteryNotLow: true,
+                requiresCharging: false,
+                requiresStorageNotLow: false,
+                requiresDeviceIdle: false,
+                requiredNetworkType: NetworkType.ANY), (String taskId) async {
       print("[BackgroundFetch], received $taskId]");
     })
         .then((int status) =>
-    {print("[BackgroundFetch], configure success: $status")})
+            {print("[BackgroundFetch], configure success: $status")})
         .catchError((e) => {print("[BackgroundFetch], configure failure: $e")});
 
     if (!mounted) return;
@@ -172,14 +173,14 @@ class _MyHomePageState extends State<MyHomePage> {
     // controller.animateCamera(CameraUpdate.newCameraPosition(_kLake));
   }
 
-  Future<bool>_checkAppVersion() async {
+  Future<bool> _checkAppVersion() async {
     final response = await http.get('http://swarmapi.qrl.nz/app/version');
 
     if (response.statusCode == 200) {
       print("Server responded with: " + response.body);
       var remoteVersionJson = jsonDecode(response.body);
-      return ListEquality().equals( [remoteVersionJson["major_version"] + remoteVersionJson["minor_version"] + remoteVersionJson["patch_version"]],appVersion);
-
+      print("Server major version is "+remoteVersionJson["major_version"].toString());
+      return !(remoteVersionJson["major_version"] == appVersion[0] && remoteVersionJson["minor_version"] == appVersion[1] && remoteVersionJson["patch_version"] == appVersion[2]);
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.
@@ -206,9 +207,7 @@ class _MyHomePageState extends State<MyHomePage> {
       //Weight is based off how recent the data point is
       var pointTime = DateTime.parse(jsonGpsPoint["latest_time"]);
       print("Time diff: " +
-          ((1 / ((currentTime
-              .difference(pointTime)
-              .inSeconds) / 600)) * 10)
+          ((1 / ((currentTime.difference(pointTime).inSeconds) / 600)) * 10)
               .round()
               .toString());
       var pointWeight =
@@ -216,9 +215,7 @@ class _MyHomePageState extends State<MyHomePage> {
               .round();
       if (pointWeight > 0) {
         points.add(_createWeightedLatLng(
-          jsonGpsPoint["latitude"], 
-          jsonGpsPoint["longitude"], 
-          pointWeight));
+            jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], pointWeight));
       }
     }
     return points;
@@ -303,20 +300,45 @@ class Settings extends StatelessWidget {
                 homePage._refreshHeatmap();
               });
             }),
-        MaterialButton (
+        MaterialButton(
           child: PaddedText("Register as new device"),
           onPressed: () async {
-            final SharedPreferences prefs = await SharedPreferences.getInstance();
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
             prefs.clear();
           },
-          ),
-        MaterialButton (
+        ),
+        MaterialButton(
           child: PaddedText("Check for updates"),
           onPressed: () async {
-            homePage._checkAppVersion();
+            if (await homePage._checkAppVersion()) {
+              return showDialog(
+                context: context,
+                barrierDismissible: true,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('New Update Available'),
+                    content: Text("Update Available"),
+                    actions: <Widget>[
+                      FlatButton(
+                        child: Text('Approve'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            }
           },
         ),
-          PaddedText("App Version: " + appVersion[0].toString() + "." + appVersion[1].toString() + "." + appVersion[2].toString())
+        PaddedText("App Version: " +
+            appVersion[0].toString() +
+            "." +
+            appVersion[1].toString() +
+            "." +
+            appVersion[2].toString())
       ],
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -339,6 +361,7 @@ class PaddedText extends StatelessWidget {
     );
   }
 }
+
 class MapPage extends StatelessWidget {
   _MyHomePageState parent;
 
@@ -404,5 +427,4 @@ class MapPage extends StatelessWidget {
       ]),
     );
   }
-
 }
