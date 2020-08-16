@@ -44,3 +44,6 @@ CovidSwarm/app.*.map.json
 
 # Exceptions to above rules.
 !CovidSwarm/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
+
+*.xlsx
+*.csv
