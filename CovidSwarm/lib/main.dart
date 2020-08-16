@@ -273,7 +273,7 @@ class Settings extends StatelessWidget {
       children: [
         Row(
           children: [
-            PaddedText("Enable background GPS upload"),
+            PaddedText("Background tracking"),
             Switch(
               value: homePage.backgroundTaskEnabled,
               onChanged: (value) {
