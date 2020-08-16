@@ -12,8 +12,12 @@ except Exception:
 
 current_time = datetime.now()
 
+formatted_year = current_time.strftime("%Y")[2:]
+formatted_time = (current_time.strftime("%d%b") + formatted_year).lower()
+
 # Link to download .csv file, update link based on current data
-url = 'https://www.health.govt.nz/system/files/documents/pages/covid-cases-15aug20.xlsx'
+url = 'https://www.health.govt.nz/system/files/documents/pages/covid-cases-' + \
+    formatted_time + '.xlsx'
 
 
 def download_data():
@@ -30,6 +34,7 @@ def get_data():
 
 
 def get_data_as_json():
+    # Get formatted data as json
     data = get_data()
     json = [{
         "date": datetime.now(),
@@ -49,7 +54,7 @@ def get_data_as_json():
 
     # Get rid of null data
     filtered_json = [
-        x for x in filtered_json if not x['location'] == ""
+        x for x in filtered_json if not x['location'] == "" and not x['location'] == 'Managed isolation & quarantine'
     ]
 
     return filtered_json
@@ -64,6 +69,15 @@ def parse_json():
         }
     }
 
+    confirmed = [
+        {
+            "name": "",
+            "latitude": 0.0000,
+            "longitude": 0.0000,
+            "confirmed": 0
+        }
+    ]
+
     # Map locs to lat, long
     with open("locations.txt") as locations:
         for line in locations:
@@ -76,12 +90,23 @@ def parse_json():
                     "longitude": longitude.rstrip()
                 }
             })
+            confirmed.append({
+                "name": name,
+                "latitude": latitude,
+                "longitude": longitude.rstrip(),
+                "confirmed": 0
+            })
 
-    for object in json:
-        object["latitude"] = locs[object["location"]]["latitude"]
-        object["longitude"] = locs[object["location"]]["longitude"]
+    confirmed[0] = None
+    for o in confirmed:
+        if o is None:
+            continue
+        for object in json:
+            # Increment confirmed
+            if object["location"] == o["name"]:
+                o["confirmed"] = o["confirmed"] + 1
 
-    return json
+    return confirmed
 
 
 connection = pymysql.connect(
@@ -110,11 +135,13 @@ def upload_data():
 
     connection.ping(reconnect=True)
     cursor = connection.cursor()
-    query = "INSERT INTO covid_cases (date, latitude, longitude) VALUES (%s, %s, %s)"
+    query = "INSERT INTO covid_cases (name, latitude, longitude, confirmed) VALUES (%s, %s, %s, %s)"
     for object in json:
+        if object is None:
+            continue
         try:
             cursor.execute(
-                query, (object["date"], object["latitude"], object["longitude"]))
+                query, (object["name"], object["latitude"], object["longitude"], object["confirmed"]))
             connection.commit()
         except Exception as e:
             print("Could not update CoVID data, Error:", e)
@@ -127,3 +154,4 @@ download_data()
 print("Uploading data into database")
 clear_data()
 upload_data()
+print("Done.")
