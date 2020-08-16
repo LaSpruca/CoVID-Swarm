@@ -321,11 +321,23 @@ class Settings extends StatelessWidget {
                     content: Text("Update Available"),
                     actions: <Widget>[
                       FlatButton(
-                        child: Text('Approve'),
-                        onPressed: () {
+                        child: Text('Download'),
+                        onPressed: () async {
+                            const url = 'http://swarm.qrl.nz';
+                            if (await canLaunch(url)) {
+                              await launch(url);
+                            } else {
+                              throw 'Could not launch $url';
+                            }
                           Navigator.of(context).pop();
                         },
                       ),
+                      FlatButton(
+                        child: Text('close'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      )
                     ],
                   );
                 },
