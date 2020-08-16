@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter_heatmap/google_maps_flutter_heatmap.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -52,6 +53,12 @@ void main() {
   runApp(MyApp());
 
   BackgroundFetch.registerHeadlessTask(backgroundFetchHeadless);
+
+  Permission.location.status.then((status) {
+    if (status.isDenied) {
+      Permission.locationAlways.request();
+    }
+  });
 }
 
 class MyApp extends StatelessWidget {

@@ -10,7 +10,7 @@
         tools:replace="android:label"
         android:name="io.flutter.app.FlutterApplication"
         android:label="CovidSwarm"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
         <meta-data android:name="com.google.android.geo.API_KEY"
                android:value="AIzaSyC0iaPPdU3WA3GNLSNWQh277NlPcgC5x88"/>
         <activity
