@@ -120,14 +120,18 @@ class _MyHomePageState extends State<MyHomePage> {
           barrierDismissible: true,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text('Welcome to CoVID swarm'),
-              content: Center(
-                  child: Column(
-                children: [
-                  new Image.asset("assets/logoAnimation.gif"),
-                  PaddedText("")
-                ],
-              )),
+              title: Text('Welcome to Covid Swarm'),
+              content: Container(
+                child: Center(
+                    child: Column(
+                  children: [
+                    new Image.asset("assets/logoAnimation.gif"),
+                    PaddedText(
+                        "\nLooking for space?\nLooking for crowds?\n\nSwarm let’s you know where others are and helps you stay safe.")
+                  ],
+                )),
+                height: 420,
+              ),
               actions: <Widget>[
                 FlatButton(
                   child: Text('close'),
