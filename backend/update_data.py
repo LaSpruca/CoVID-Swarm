@@ -55,6 +55,35 @@ def get_data_as_json():
     return filtered_json
 
 
+def parse_json():
+    json = get_data_as_json()
+    locs = {
+        "": {
+            "latitude": 0.0000,
+            "longitude": 0.0000
+        }
+    }
+
+    # Map locs to lat, long
+    with open("locations.txt") as locations:
+        for line in locations:
+            name, value = line.partition("=")[::2]
+            # Change to langitude and longitude
+            latitude, longitude = str(value).split(",")
+            locs.update({
+                name: {
+                    "latitude": latitude,
+                    "longitude": longitude.rstrip()
+                }
+            })
+
+    for object in json:
+        object["latitude"] = locs[object["location"]]["latitude"]
+        object["longitude"] = locs[object["location"]]["longitude"]
+
+    return json
+
+
 connection = pymysql.connect(
     host=config.host,
     user=config.username,
@@ -77,15 +106,15 @@ def clear_data():
 
 
 def upload_data():
-    json = get_data_as_json()
+    json = parse_json()
 
     connection.ping(reconnect=True)
     cursor = connection.cursor()
-    query = "INSERT INTO covid_cases (date, location) VALUES (%s, %s)"
+    query = "INSERT INTO covid_cases (date, latitude, longitude) VALUES (%s, %s, %s)"
     for object in json:
         try:
             cursor.execute(
-                query, (object["date"], object["location"]))
+                query, (object["date"], object["latitude"], object["longitude"]))
             connection.commit()
         except Exception as e:
             print("Could not update CoVID data, Error:", e)
