@@ -141,6 +141,14 @@ class _MyHomePageState extends State<MyHomePage> {
             {print("[BackgroundFetch], configure success: $status")})
         .catchError((e) => {print("[BackgroundFetch], configure failure: $e")});
 
+    if (backgroundTaskEnabled) {
+      BackgroundFetch.start()
+          .then((value) => print("[BackgroundFetch] started, code $value"))
+          .catchError((err) {
+        print("[BackgroundFetch] error starting, code $err");
+      });
+    }
+
     if (!mounted) return;
   }
 
@@ -286,6 +294,21 @@ class Settings extends StatelessWidget {
               onChanged: (value) {
                 homePage.setState(() {
                   homePage.backgroundTaskEnabled = value;
+                  if (homePage.backgroundTaskEnabled) {
+                    BackgroundFetch.start()
+                        .then((value) =>
+                            print("[BackgroundFetch] started, code $value"))
+                        .catchError((err) {
+                      print("[BackgroundFetch] error starting, code $err");
+                    });
+                  } else {
+                    BackgroundFetch.stop()
+                        .then((value) =>
+                            print("[BackgroundFetch] stopped, code $value"))
+                        .catchError((err) {
+                      print("[BackgroundFetch] error stopping, code $err");
+                    });
+                  }
                 });
               },
             ),
