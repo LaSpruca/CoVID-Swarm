@@ -98,6 +98,8 @@ class _MyHomePageState extends State<MyHomePage> {
   bool heatmapVissable = true;
   bool coronaCaseVissable = true;
 
+  List<Marker> markers = [];
+
   @override
   void initState() {
     super.initState();
@@ -106,6 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
     Timer.periodic(fiveMinutes, (timer) {
       setState(() {
         _refreshHeatmap();
+        loadPoints();
       });
     });
   }
@@ -290,7 +293,7 @@ class _MyHomePageState extends State<MyHomePage> {
               .round();
       if (pointWeight > 0) {
         points.add(_createWeightedLatLng(
-            jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], pointWeight));
+            jsonGpsPoint["latitude"], jsonGpsPoint["longitude"], 1));
       }
     }
     return points;
@@ -335,6 +338,55 @@ class _MyHomePageState extends State<MyHomePage> {
       ));
       return "[]";
     }
+  }
+
+  Future<String> _getServerCovid() async {
+    final response = await http.get('http://swarmapi.qrl.nz/covid');
+
+    if (response.statusCode == 200) {
+      print("Server responded with: " + response.body);
+      return response.body;
+    } else {
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+
+      _scaffoldKey.currentState.showSnackBar(SnackBar(
+        content:
+            new Text('Failed to contact server! Code: ${response.statusCode}'),
+        duration: new Duration(seconds: 5),
+      ));
+      return "[]";
+    }
+  }
+
+  Future<void> loadPoints() async {
+    if (!coronaCaseVissable) {
+      markers = [];
+      return;
+    }
+
+    var response = await _getServerCovid();
+    print("Server response: $response");
+    var parsed = json.decode(response);
+
+    markers = [];
+
+    for (var point in parsed) {
+      markers.add(Marker(
+          markerId: MarkerId(point['name']),
+          position: LatLng(point['latitude'], point['longitude']),
+          onTap: () => {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text(point["name"]),
+                    content: Text("Confirmed Cases: ${point['confirmed']}"),
+                  ),
+                )
+              }));
+      print('added marker for ${point['name']}');
+    }
+    setState(() {});
   }
 }
 
@@ -485,6 +537,8 @@ class PaddedText extends StatelessWidget {
 class MapPage extends StatelessWidget {
   _MyHomePageState parent;
 
+  BuildContext context;
+
   MapPage(this.parent);
 
   void _showDialog(BuildContext context) {
@@ -525,8 +579,10 @@ class MapPage extends StatelessWidget {
                     Switch(
                       value: coronaVisable,
                       onChanged: (value) {
-                        parent
-                            .setState(() => parent.coronaCaseVissable = value);
+                        parent.setState(() {
+                          parent.coronaCaseVissable = value;
+                          parent.loadPoints();
+                        });
                         coronaVisable = value;
                         Navigator.of(context).pop();
                         _showDialog(context);
@@ -554,6 +610,7 @@ class MapPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    this.context = context;
     return Scaffold(
       key: parent._mapScaffoldKey,
       body: GoogleMap(
@@ -571,12 +628,18 @@ class MapPage extends StatelessWidget {
         },
         onCameraMove: parent._cameraMove,
         onCameraIdle: parent._cameraIdle,
+        markers: parent.markers.toSet(),
       ),
       floatingActionButton: Stack(children: [
         Align(
             alignment: Alignment.bottomRight,
             child: FloatingActionButton.extended(
-              onPressed: parent._refreshHeatmap,
+              onPressed: () {
+                parent._refreshHeatmap;
+                parent.setState(() {
+                  parent.loadPoints();
+                });
+              },
               label: Text("Refresh"),
               icon: Icon(Icons.refresh),
             )),
