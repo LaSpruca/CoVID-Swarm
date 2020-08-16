@@ -1,5 +1,6 @@
 import pandas as pd
 import pymysql
+import random
 
 try:
     import config
@@ -39,7 +40,6 @@ connection = pymysql.connect(
 
 def upload_data():
     json = get_data_as_json()
-    print(json)
 
     global connection
     connection.ping(reconnect=True)
@@ -50,7 +50,7 @@ def upload_data():
         try:
             device_id = device_id - 1
             cursor.execute(
-                query, (device_id, False, j["latitude"], j["longitude"]))
+                query, (device_id, False, j["latitude"] * random.uniform(0.99, 1.01), j["longitude"] * random.uniform(0.99, 1.01)))
             connection.commit()
         except Exception as e:
             print("Update GPS failed, Error:", e)
